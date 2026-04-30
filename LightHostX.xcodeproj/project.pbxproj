@@ -41,6 +41,7 @@
 		2A5E56602C693BC1006E727C /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2A5E565F2C693BC1006E727C /* CoreVideo.framework */; };
 		2A5E56622C693C0A006E727C /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2A5E56612C693C0A006E727C /* QuartzCore.framework */; };
 		2A5E56642C693C2E006E727C /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2A5E56632C693C2E006E727C /* Accelerate.framework */; };
+		2A5E56672C6C8F28006E727C /* PluginWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2A5E56652C6C8F28006E727C /* PluginWindow.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -2402,6 +2403,8 @@
 		2A5E565F2C693BC1006E727C /* CoreVideo.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreVideo.framework; path = System/Library/Frameworks/CoreVideo.framework; sourceTree = SDKROOT; };
 		2A5E56612C693C0A006E727C /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
 		2A5E56632C693C2E006E727C /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = System/Library/Frameworks/Accelerate.framework; sourceTree = SDKROOT; };
+		2A5E56652C6C8F28006E727C /* PluginWindow.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = PluginWindow.cpp; sourceTree = "<group>"; };
+		2A5E56662C6C8F28006E727C /* PluginWindow.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = PluginWindow.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -2467,6 +2470,8 @@
 				2A5E564A2C6920DE006E727C /* main.mm */,
 				2A5E430A2C6806B8006E727C /* Assets.xcassets */,
 				2A5E43112C6806B8006E727C /* LightHostX.entitlements */,
+				2A5E56652C6C8F28006E727C /* PluginWindow.cpp */,
+				2A5E56662C6C8F28006E727C /* PluginWindow.hpp */,
 			);
 			path = LightHostX;
 			sourceTree = "<group>";
@@ -7047,6 +7052,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				2A5E564B2C6920DE006E727C /* main.mm in Sources */,
+				2A5E56672C6C8F28006E727C /* PluginWindow.cpp in Sources */,
 				2A5E43062C6806B7006E727C /* AppDelegate.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -7130,7 +7136,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 14.5;
+				MACOSX_DEPLOYMENT_TARGET = 11.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -7186,7 +7192,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 14.5;
+				MACOSX_DEPLOYMENT_TARGET = 11.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
@@ -7201,7 +7207,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = LightHostX/LightHostX.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEAD_CODE_STRIPPING = YES;
@@ -7246,7 +7252,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = LightHostX/LightHostX.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEAD_CODE_STRIPPING = YES;

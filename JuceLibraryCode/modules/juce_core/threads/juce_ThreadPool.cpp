@@ -388,8 +388,9 @@ bool ThreadPool::runNextJob (ThreadPoolThread& thread)
         {
             result = job->runJob();
         }
-        catch (...)
+        catch (std::exception e)
         {
+            NSLog(@"%s", e.what());
             jassertfalse; // Your runJob() method mustn't throw any exceptions!
         }
 

@@ -109,8 +109,9 @@ void Thread::threadEntryPoint()
         {
             run();
         }
-        catch (...)
+        catch (std::exception e)
         {
+            NSLog(@"%s", e.what());
             jassertfalse; // Your run() method mustn't throw any exceptions!
         }
     }

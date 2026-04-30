@@ -26,8 +26,13 @@
     wPrefs = nil;
     wPlugins = nil;
 
+    NSString* osxMode = [[NSUserDefaults standardUserDefaults] stringForKey:@"AppleInterfaceStyle"];
+
     lookAndFeel = std::make_unique<LookAndFeel_V4>();
-    lookAndFeel->setColourScheme(LookAndFeel_V4::getMidnightColourScheme());
+    // getMidnightColourScheme with dark menu bg
+    lookAndFeel->setColourScheme((osxMode && [osxMode isEqualToString:@"Dark"]) ? LookAndFeel_V4::ColourScheme({ 0xff2f2f3a, 0xff191926, 0xff191926,
+        0xff66667c, 0xc8ffffff, 0xffd8d8d8,
+        0xffffffff, 0xff606073, 0xffd6d6d6 }) : LookAndFeel_V4::getLightColourScheme());
     LookAndFeel::setDefaultLookAndFeel(lookAndFeel.get());
     
     settings = [NSUserDefaults standardUserDefaults];
@@ -62,7 +67,6 @@
     [self fillMenu];
 }
 
-
 - (void)applicationWillTerminate:(NSNotification *)aNotification {
     // Insert code here to tear down your application
 
@@ -74,7 +78,7 @@
         wPlugins->exitModalState(-1);
         delete wPlugins;
     }
-    //PluginWindow::closeAllCurrentlyOpenWindows();
+    PluginWindow::closeAllCurrentlyOpenWindows();
 
     [self savePluginStates];
     
@@ -104,7 +108,8 @@
     AudioProcessorGraph::NodeID OUTPUT(INPUT.uid + 1);
     const int CHANNEL_ONE = 0;
     const int CHANNEL_TWO = 1;
-    
+    PluginWindow::closeAllCurrentlyOpenWindows();
+
     graph->clear();
     inputNode = graph->addNode(std::make_unique<AudioProcessorGraph::AudioGraphIOProcessor>(AudioProcessorGraph::AudioGraphIOProcessor::audioInputNode), INPUT);
     outputNode = graph->addNode(std::make_unique<AudioProcessorGraph::AudioGraphIOProcessor>(AudioProcessorGraph::AudioGraphIOProcessor::audioOutputNode), OUTPUT);
@@ -269,12 +274,13 @@
         [[appMenu addItemWithTitle: @"Active Plugins" action:nil keyEquivalent:@""] setEnabled:NO];
     }
     auto sortedPluginList = [self getActiveSortedList];
-    for (auto& plugin : sortedPluginList) {
+    for (int i = 0; i < sortedPluginList.size(); ++i) {
+        auto plugin = sortedPluginList[i];
         NSMenuItem* item = [appMenu addItemWithTitle:[NSString stringWithUTF8String:plugin.name.toStdString().c_str()] action:nil keyEquivalent:@""];
         //item.indentationLevel = 1;
         //[item.attributedTitle
 
-        [item setRepresentedObject:[NSString stringWithUTF8String: plugin.createIdentifierString().toStdString().c_str()]];
+        [item setRepresentedObject:[NSNumber numberWithInt:i]];
 
         NSMenu *submenu = [[NSMenu alloc] init];
         [item setSubmenu:submenu];
@@ -282,7 +288,7 @@
         NSString* key = [self getKey:@"bypass" :plugin];
         BOOL bypass = [self getBoolValue:key];
         
-        [submenu addItemWithTitle:@"Edit" action:nil keyEquivalent:@""];
+        [submenu addItemWithTitle:@"Edit" action:@selector(onClickEdit:) keyEquivalent:@""];
         [[submenu addItemWithTitle:@"Bypass" action:nil keyEquivalent:@""] setState:(bypass ? NSControlStateValueOn : NSControlStateValueOff)];
         [submenu addItem:[NSMenuItem separatorItem]];
         [submenu addItemWithTitle:@"Move Up" action:nil keyEquivalent:@""];
@@ -302,11 +308,16 @@
     for (auto& sub : pluginTree->subFolders) {
         NSMenuItem* item = [appMenu addItemWithTitle:[NSString stringWithUTF8String:sub->folder.toStdString().c_str()] action:nil keyEquivalent:@""];
         NSMenu *submenu = [[NSMenu alloc] init];
+        //[submenu setAutoenablesItems:NO];
         [item setSubmenu:submenu];
         
         for (auto& plugin : sub->plugins) {
             NSMenuItem* pItem = [submenu addItemWithTitle:[NSString stringWithUTF8String:plugin.name.toStdString().c_str()] action:@selector(onClickAdd:) keyEquivalent:@""];
             [pItem setRepresentedObject:[NSString stringWithUTF8String: plugin.createIdentifierString().toStdString().c_str()]];
+            if (std::find_if(sortedPluginList.begin(), sortedPluginList.end(), [&](const auto& p){return p.isDuplicateOf(plugin);}) != sortedPluginList.end()) {
+                [pItem setState:NSControlStateValueOn];
+                //[pItem setEnabled:NO];
+            }
         }
     }
 
@@ -317,9 +328,12 @@
 }
 
 - (void)onClickEdit:(id)sender {
-    String idString = [[[sender parentItem] representedObject] UTF8String];
-    auto plugin = knownPluginList->getTypeForIdentifierString(idString);
+    int idx = ((NSNumber*)[[sender parentItem] representedObject]).intValue;
+    AudioProcessorGraph::Node::Ptr f = graph->getNodeForId(AudioProcessorGraph::NodeID(idx + 1));
 
+    if (PluginWindow* const w = PluginWindow::getWindowFor(f, PluginWindow::Normal)) {
+        w->toFront(true);
+    }
 }
 
 - (void)onClickAdd:(id)sender {

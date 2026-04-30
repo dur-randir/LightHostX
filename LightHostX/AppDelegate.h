@@ -7,6 +7,7 @@
 
 #import <Cocoa/Cocoa.h>
 #import "JuceHeader.h"
+#import "PluginWindow.hpp"
 
 @interface AppDelegate : NSObject <NSApplicationDelegate>
 {
