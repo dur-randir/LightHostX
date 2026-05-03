@@ -14,6 +14,7 @@ PluginListWindow::PluginListWindow(KnownPluginList& list, AudioPluginFormatManag
 {
     const File deadMansPedalFile(AppProperties::get()->getFile().getSiblingFile("RecentlyCrashedPluginsList"));
 
+    list.addChangeListener(this);
     setContentOwned(new PluginListComponent(pluginFormatManager,
             list,
             deadMansPedalFile,
@@ -25,7 +26,6 @@ PluginListWindow::PluginListWindow(KnownPluginList& list, AudioPluginFormatManag
     setTopLeftPosition(60, 60);
 
     restoreWindowStateFromString(AppProperties::get()->getValue("listWindowPos"));
-    setVisible(true);
 }
 
 PluginListWindow::~PluginListWindow() {
@@ -37,6 +37,17 @@ void PluginListWindow::closeButtonPressed() {
     this->setVisible(false);
 }
 
+void PluginListWindow::changeListenerCallback(ChangeBroadcaster* changed)
+{
+    if (auto knownPluginList = dynamic_cast<KnownPluginList*>(changed)) {
+        std::unique_ptr<XmlElement> savedPluginList (knownPluginList->createXml());
+
+        if (savedPluginList != nullptr) {
+            AppProperties::get()->setValue ("pluginList", savedPluginList.get());
+            AppProperties::saveIfNeeded();
+        }
+    }
+}
 bool PluginListWindow::keyPressed(const KeyPress& key)
 {
     if (key.getKeyCode() == KeyPress::escapeKey) {

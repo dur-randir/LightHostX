@@ -24,8 +24,6 @@ using AudioDeviceManagerSP = std::shared_ptr<AudioDeviceManager>;
 class DeviceSelectorDialog : public juce::Component
 {
 public:
-    std::function<void()> onScaleChanged;
-
     /// 建構函式
     /// @param dm     音訊裝置管理器
     /// @param maxIn  最大輸入聲道數（0 表示隱藏輸入選項）

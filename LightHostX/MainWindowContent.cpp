@@ -27,20 +27,16 @@ MainWindowContent::MainWindowContent(AudioDeviceManagerSP      dm,
         if (onManagePlugins) onManagePlugins();
     };
     graphCanvas->onGraphChanged     = [this] {
-        if (onGraphChanged) onGraphChanged();
+        if (auto xml = this->saveState()) {
+            AppProperties::get()->setValue("nodeGraphState", xml.get());
+            AppProperties::saveIfNeeded();
+        }
     };
     graphCanvas->onEditNode         = [this] (int /*nodeId*/, NodeType type) {
         showDialog(false, type);
     };
 
     addAndMakeVisible(*graphCanvas);
-}
-
-void MainWindowContent::saveState() {
-    // Save audio device configuration
-    std::unique_ptr<XmlElement> audioState(deviceManager->createStateXml());
-    AppProperties::get()->setValue("audioDeviceState", audioState.get());
-    AppProperties::saveIfNeeded();
 }
 
 void MainWindowContent::showDialog(bool create, NodeType type) {

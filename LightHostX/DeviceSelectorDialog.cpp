@@ -71,9 +71,6 @@ void DeviceSelectorDialog::updateSelectorComponent()
             maxBottom = jmax(maxBottom, c->getBottom());
     }
     computedContentHeight = (maxBottom > 30) ? maxBottom : 300;
-    
-    if (onScaleChanged)
-        onScaleChanged();
 }
 
 // ---- private helpers ----

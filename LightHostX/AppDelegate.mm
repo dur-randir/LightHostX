@@ -45,12 +45,13 @@
     std::unique_ptr<XmlElement> savedPluginList(AppProperties::get()->getXmlValue("pluginList"));
     if (savedPluginList) {
         knownPluginList->recreateFromXml(*savedPluginList);
+        knownPluginList->sort(KnownPluginList::SortMethod::sortAlphabetically, true);
     }
-    //knownPluginList.addChangeListener(self);
     
     // Setup the main content and bind the graph change callback for saving
     mainContent = std::make_unique<MainWindowContent>(deviceManager, *knownPluginList, *formatManager, graph);
-        
+    mainContent->onManagePlugins = [self] { [self showEditPlugins ]; };
+
     std::unique_ptr<XmlElement> savedGraphState(AppProperties::get()->getXmlValue("nodeGraphState"));
     if (savedGraphState) {
         mainContent->loadState(*savedGraphState);
@@ -96,6 +97,7 @@
         mainWindow->setAlwaysOnTop(true);
     }
 
+    Process::makeForegroundProcess();
     mainWindow->setVisible(true);
     mainWindow->grabKeyboardFocus();
 }
@@ -106,6 +108,7 @@
         pluginListWindow->setAlwaysOnTop(true);
     }
 
+    Process::makeForegroundProcess();
     pluginListWindow->setVisible(true);
     pluginListWindow->grabKeyboardFocus();
 }

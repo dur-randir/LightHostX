@@ -11,13 +11,14 @@
 #include "JuceHeader.h"
 
 class IconMenu;
-class PluginListWindow : public DocumentWindow
+class PluginListWindow : public DocumentWindow, public ChangeListener
 {
 public:
     PluginListWindow(KnownPluginList& list, AudioPluginFormatManager& pluginFormatManager);
     ~PluginListWindow();
-    void closeButtonPressed();
+    void closeButtonPressed() override;
     bool keyPressed(const KeyPress& key) override;
+    void changeListenerCallback(ChangeBroadcaster* changed) override;
 
 private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginListWindow)

@@ -40,6 +40,26 @@ namespace NP
 
 //==============================================================================
 
+struct Rates {
+    double sr;
+    int bs;
+
+    static Rates getRates(AudioDeviceManagerSP dm) {
+        double sr = 44100.0;
+        int    bs = 512;
+
+        if (auto* dev = dm->getCurrentAudioDevice()) {
+            sr = dev->getCurrentSampleRate();
+            bs = dev->getCurrentBufferSizeSamples();
+        }
+
+        return {sr, bs};
+    }
+};
+
+
+//==============================================================================
+
 enum class NodeType { Input, Output, Plugin };
 
 //==============================================================================

@@ -24,18 +24,14 @@ public:
     void paint(Graphics& g) override;
 
     std::function<void()> onManagePlugins;
-    std::function<void()> onGraphChanged;
-    std::function<void()> onScaleChanged;
 
     std::unique_ptr<XmlElement> saveState() const;
     void loadState(const XmlElement& xml);
 
 private:
-    AudioDeviceManagerSP       deviceManager;
-
+    AudioDeviceManagerSP             deviceManager;
     std::unique_ptr<NodeGraphCanvas> graphCanvas;
 
-    void saveState();
     void showDialog(bool create, NodeType type);
 };
 

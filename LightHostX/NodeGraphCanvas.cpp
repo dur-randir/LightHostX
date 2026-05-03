@@ -30,13 +30,7 @@ NodeGraphCanvas::NodeGraphCanvas(AudioDeviceManagerSP dm,
     outputNode = graph->addNode(std::make_unique<IOProcessor>(IOProcessor::audioOutputNode),
                      AudioProcessorGraph::NodeID(NodeGraphCanvas::kOutputNodeUID));
 
-    double sr = 44100.0;
-    int    bs = 512;
-    if (auto* dev = deviceManager->getCurrentAudioDevice())
-    {
-        sr = dev->getCurrentSampleRate();
-        bs = dev->getCurrentBufferSizeSamples();
-    }
+    auto && [sr, bs] = Rates::getRates(deviceManager);
 
     inputNode->getProcessor()->setPlayConfigDetails(1, 2, sr, bs);
     inputNode->getProcessor()->prepareToPlay(sr, bs);
@@ -722,13 +716,7 @@ void NodeGraphCanvas::showPluginPicker(Point<int> canvasPos)
             const auto& desc = types[result - 1];
 
             String err;
-            double sr = 44100.0;
-            int    bs = 512;
-            if (auto* dev = deviceManager->getCurrentAudioDevice())
-            {
-                sr = dev->getCurrentSampleRate();
-                bs = dev->getCurrentBufferSizeSamples();
-            }
+            auto && [sr, bs] = Rates::getRates(deviceManager);
 
             auto instance = formatManager.createPluginInstance(desc, sr, bs, err);
             if (!instance)
@@ -953,13 +941,7 @@ void NodeGraphCanvas::loadState(const XmlElement& xml)
             }
 
             String err;
-            double sr = 44100.0;
-            int bs = 512;
-            if (auto* dev = deviceManager->getCurrentAudioDevice())
-            {
-                sr = dev->getCurrentSampleRate();
-                bs = dev->getCurrentBufferSizeSamples();
-            }
+            auto && [sr, bs] = Rates::getRates(deviceManager);
 
             DBG("Restoring plugin: " << desc.name << " [" << desc.pluginFormatName << "]");
             auto instance = formatManager.createPluginInstance(desc, sr, bs, err);

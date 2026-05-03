@@ -21,8 +21,6 @@ DeviceSelectorWindow::DeviceSelectorWindow(const String &title, AudioDeviceManag
 {
     // 創建並設定對話框組件
     auto *dlg = new DeviceSelectorDialog(dm, maxIn, maxOut);
-    dlg->onScaleChanged = [this]
-    { updateWindowSize(); };
 
     // 設定視窗風格
     setContentOwned(dlg, true);   // 視窗擁有對話框生命週期

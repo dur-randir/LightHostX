@@ -23,7 +23,6 @@ MainWindow::MainWindow(MainWindowContent* content)
     setResizable(true, false);
     setResizeLimits(600, 400, 4096, 4096);
     centreWithSize(900, 560);
-    setVisible(true);
     setTopLeftPosition(250, 150); // 預設視窗左上角座標
 }
 
