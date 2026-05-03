@@ -7,6 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		2A50C10A2FA7254D00D26E9C /* PluginListWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2A50C1092FA7254D00D26E9C /* PluginListWindow.cpp */; };
+		2A50C10D2FA7288300D26E9C /* MainWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2A50C10C2FA7288300D26E9C /* MainWindow.cpp */; };
+		2A50C1132FA738FD00D26E9C /* NodeGraphCanvas.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2A50C1122FA738FD00D26E9C /* NodeGraphCanvas.cpp */; };
+		2A50C1162FA7390F00D26E9C /* MainWindowContent.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2A50C1152FA7390F00D26E9C /* MainWindowContent.cpp */; };
+		2A50C1192FA7617400D26E9C /* DeviceSelectorWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2A50C1182FA7617400D26E9C /* DeviceSelectorWindow.cpp */; };
+		2A50C11C2FA761D600D26E9C /* DeviceSelectorDialog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2A50C11B2FA761D600D26E9C /* DeviceSelectorDialog.cpp */; };
 		2A5E43062C6806B7006E727C /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2A5E43052C6806B7006E727C /* AppDelegate.mm */; };
 		2A5E430B2C6806B8006E727C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2A5E430A2C6806B8006E727C /* Assets.xcassets */; };
 		2A5E561F2C680A6F006E727C /* include_juce_audio_basics.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2A5E4D252C68089B006E727C /* include_juce_audio_basics.mm */; };
@@ -45,6 +51,19 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		2A50C1082FA7254D00D26E9C /* PluginListWindow.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = PluginListWindow.hpp; sourceTree = "<group>"; };
+		2A50C1092FA7254D00D26E9C /* PluginListWindow.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = PluginListWindow.cpp; sourceTree = "<group>"; };
+		2A50C10B2FA7288300D26E9C /* MainWindow.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = MainWindow.hpp; sourceTree = "<group>"; };
+		2A50C10C2FA7288300D26E9C /* MainWindow.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MainWindow.cpp; sourceTree = "<group>"; };
+		2A50C10E2FA7336F00D26E9C /* AppProperties.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = AppProperties.hpp; sourceTree = "<group>"; };
+		2A50C1112FA738FD00D26E9C /* NodeGraphCanvas.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = NodeGraphCanvas.hpp; sourceTree = "<group>"; };
+		2A50C1122FA738FD00D26E9C /* NodeGraphCanvas.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = NodeGraphCanvas.cpp; sourceTree = "<group>"; };
+		2A50C1142FA7390F00D26E9C /* MainWindowContent.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = MainWindowContent.hpp; sourceTree = "<group>"; };
+		2A50C1152FA7390F00D26E9C /* MainWindowContent.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MainWindowContent.cpp; sourceTree = "<group>"; };
+		2A50C1172FA7617400D26E9C /* DeviceSelectorWindow.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = DeviceSelectorWindow.hpp; sourceTree = "<group>"; };
+		2A50C1182FA7617400D26E9C /* DeviceSelectorWindow.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = DeviceSelectorWindow.cpp; sourceTree = "<group>"; };
+		2A50C11A2FA761D600D26E9C /* DeviceSelectorDialog.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = DeviceSelectorDialog.hpp; sourceTree = "<group>"; };
+		2A50C11B2FA761D600D26E9C /* DeviceSelectorDialog.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = DeviceSelectorDialog.cpp; sourceTree = "<group>"; };
 		2A5E43012C6806B7006E727C /* LightHostX.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LightHostX.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2A5E43042C6806B7006E727C /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		2A5E43052C6806B7006E727C /* AppDelegate.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AppDelegate.mm; sourceTree = "<group>"; };
@@ -2468,10 +2487,23 @@
 				2A5E43042C6806B7006E727C /* AppDelegate.h */,
 				2A5E43052C6806B7006E727C /* AppDelegate.mm */,
 				2A5E564A2C6920DE006E727C /* main.mm */,
+				2A50C10E2FA7336F00D26E9C /* AppProperties.hpp */,
+				2A50C11A2FA761D600D26E9C /* DeviceSelectorDialog.hpp */,
+				2A50C11B2FA761D600D26E9C /* DeviceSelectorDialog.cpp */,
+				2A50C1172FA7617400D26E9C /* DeviceSelectorWindow.hpp */,
+				2A50C1182FA7617400D26E9C /* DeviceSelectorWindow.cpp */,
+				2A50C1112FA738FD00D26E9C /* NodeGraphCanvas.hpp */,
+				2A50C1122FA738FD00D26E9C /* NodeGraphCanvas.cpp */,
+				2A50C10B2FA7288300D26E9C /* MainWindow.hpp */,
+				2A50C10C2FA7288300D26E9C /* MainWindow.cpp */,
+				2A50C1142FA7390F00D26E9C /* MainWindowContent.hpp */,
+				2A50C1152FA7390F00D26E9C /* MainWindowContent.cpp */,
+				2A5E56662C6C8F28006E727C /* PluginWindow.hpp */,
+				2A5E56652C6C8F28006E727C /* PluginWindow.cpp */,
+				2A50C1082FA7254D00D26E9C /* PluginListWindow.hpp */,
+				2A50C1092FA7254D00D26E9C /* PluginListWindow.cpp */,
 				2A5E430A2C6806B8006E727C /* Assets.xcassets */,
 				2A5E43112C6806B8006E727C /* LightHostX.entitlements */,
-				2A5E56652C6C8F28006E727C /* PluginWindow.cpp */,
-				2A5E56662C6C8F28006E727C /* PluginWindow.hpp */,
 			);
 			path = LightHostX;
 			sourceTree = "<group>";
@@ -7051,8 +7083,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2A50C1132FA738FD00D26E9C /* NodeGraphCanvas.cpp in Sources */,
+				2A50C10A2FA7254D00D26E9C /* PluginListWindow.cpp in Sources */,
+				2A50C1192FA7617400D26E9C /* DeviceSelectorWindow.cpp in Sources */,
+				2A50C10D2FA7288300D26E9C /* MainWindow.cpp in Sources */,
 				2A5E564B2C6920DE006E727C /* main.mm in Sources */,
 				2A5E56672C6C8F28006E727C /* PluginWindow.cpp in Sources */,
+				2A50C11C2FA761D600D26E9C /* DeviceSelectorDialog.cpp in Sources */,
+				2A50C1162FA7390F00D26E9C /* MainWindowContent.cpp in Sources */,
 				2A5E43062C6806B7006E727C /* AppDelegate.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -1,6 +1,8 @@
 #ifndef PluginWindow_h
 #define PluginWindow_h
 
+#include "JuceHeader.h"
+
 class PluginWindow  : public DocumentWindow
 {
 public:
@@ -22,13 +24,30 @@ public:
     static void closeAllCurrentlyOpenWindows();
     static bool containsActiveWindows();
     
+    void moved() override;
     void closeButtonPressed() override;
 
 private:
     AudioProcessorGraph::Node* owner;
     WindowFormatType type;
-
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PluginWindow)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginWindow)
 };
+
+inline String toString (PluginWindow::WindowFormatType type)
+{
+    switch (type)
+    {
+        case PluginWindow::Normal:     return "Normal";
+        case PluginWindow::Generic:    return "Generic";
+        case PluginWindow::Programs:   return "Programs";
+        case PluginWindow::Parameters: return "Parameters";
+        case PluginWindow::NumTypes:   return "NumTypes";
+        default:                       return String();
+    }
+}
+
+inline String getLastXProp (PluginWindow::WindowFormatType type)    { return "uiLastX_" + toString (type); }
+inline String getLastYProp (PluginWindow::WindowFormatType type)    { return "uiLastY_" + toString (type); }
+inline String getOpenProp  (PluginWindow::WindowFormatType type)    { return "uiopen_"  + toString (type); }
 
 #endif /* PluginWindow_hpp */

@@ -7,24 +7,31 @@
 
 #import <Cocoa/Cocoa.h>
 #import "JuceHeader.h"
+#import "AppProperties.hpp"
 #import "PluginWindow.hpp"
+#import "MainWindow.hpp"
+#import "MainWindowContent.hpp"
+#import "PluginListWindow.hpp"
 
-@interface AppDelegate : NSObject <NSApplicationDelegate>
+using IOProcessor = AudioProcessorGraph::AudioGraphIOProcessor;
+
+@interface AppDelegate : NSObject<NSApplicationDelegate>
 {
     ScopedJuceInitialiser_GUI* juceMessageThread;
     NSUserDefaults* settings;
-    std::unique_ptr<LookAndFeel_V4> lookAndFeel;
     NSMenu* appMenu;
-    DialogWindow* wPrefs;
-    DialogWindow* wPlugins;
-    
-    std::unique_ptr<AudioDeviceManager> deviceManager;
-    std::unique_ptr<AudioPluginFormatManager> formatManager;
-    std::unique_ptr<KnownPluginList> knownPluginList;
-    std::unique_ptr<KnownPluginList> activePluginList;
-    std::unique_ptr<AudioProcessorGraph> graph;
-    std::unique_ptr<AudioProcessorPlayer> player;
+    LookAndFeel_V4 lookAndFeel;
+
+    std::shared_ptr<AudioDeviceManager> deviceManager;
+    AudioPluginFormatManager formatManager;
+    KnownPluginList knownPluginList;
+    AudioProcessorGraph graph;
+    AudioProcessorPlayer player;
     AudioProcessorGraph::Node::Ptr inputNode;
     AudioProcessorGraph::Node::Ptr outputNode;
+    
+    std::unique_ptr<MainWindow> mainWindow;
+    std::unique_ptr<MainWindowContent> mainContent;
+    std::unique_ptr<PluginListWindow> pluginListWindow;
 }
 @end

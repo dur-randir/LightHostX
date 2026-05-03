@@ -16,86 +16,73 @@
     NSStatusItem *item = [bar statusItemWithLength:NSSquareStatusItemLength];
     item.button.image = [NSImage imageNamed:@"MenuIcon"];
     [item.button.image setTemplate:TRUE];
-    item.button.title = @"";
+    item.button.title = @"LightHostX";
     
     appMenu = [NSMenu new];
     [item setMenu:appMenu];
     [item retain];
     
     juceMessageThread = new ScopedJuceInitialiser_GUI();
-    wPrefs = nil;
-    wPlugins = nil;
-
+    
     NSString* osxMode = [[NSUserDefaults standardUserDefaults] stringForKey:@"AppleInterfaceStyle"];
-
-    lookAndFeel = std::make_unique<LookAndFeel_V4>();
+    
     // getMidnightColourScheme with dark menu bg
-    lookAndFeel->setColourScheme((osxMode && [osxMode isEqualToString:@"Dark"]) ? LookAndFeel_V4::ColourScheme({ 0xff2f2f3a, 0xff191926, 0xff191926,
+    lookAndFeel.setColourScheme((osxMode && [osxMode isEqualToString:@"Dark"]) ? LookAndFeel_V4::ColourScheme({ 0xff2f2f3a, 0xff191926, 0xff191926,
         0xff66667c, 0xc8ffffff, 0xffd8d8d8,
         0xffffffff, 0xff606073, 0xffd6d6d6 }) : LookAndFeel_V4::getLightColourScheme());
-    LookAndFeel::setDefaultLookAndFeel(lookAndFeel.get());
+    LookAndFeel::setDefaultLookAndFeel(&lookAndFeel);
     
     settings = [NSUserDefaults standardUserDefaults];
-
-    deviceManager = std::make_unique<AudioDeviceManager>();
-    formatManager = std::make_unique<AudioPluginFormatManager>();
-    knownPluginList = std::make_unique<KnownPluginList>();
-    activePluginList = std::make_unique<KnownPluginList>();
-    graph = std::make_unique<AudioProcessorGraph>();
-    player = std::make_unique<AudioProcessorPlayer>();
-
+    
+    deviceManager = std::make_shared<AudioDeviceManager>();
+    
     // Audio device
-    formatManager.get()->addDefaultFormats();
-    std::unique_ptr<XmlElement> savedAudioState = [self getXmlValue:@"audioDeviceState"];
-    deviceManager.get()->initialise(256, 256, savedAudioState.get(), true);
-    player->setProcessor(graph.get());
-    deviceManager->addAudioCallback(player.get());
-
+    formatManager.addDefaultFormats();
+    
+    // Audio device
+    std::unique_ptr<XmlElement> savedAudioState (AppProperties::get()->getXmlValue("audioDeviceState"));
+    deviceManager->initialise(2, 2, savedAudioState.get(), true);
+    
     // Plugins - all
-    std::unique_ptr<XmlElement> savedPluginList = [self getXmlValue:@"pluginList"];
-    if (savedPluginList != nil){
-        knownPluginList->recreateFromXml(*savedPluginList);
+    std::unique_ptr<XmlElement> savedPluginList(AppProperties::get()->getXmlValue("pluginList"));
+    if (savedPluginList) {
+        knownPluginList.recreateFromXml(*savedPluginList);
     }
-
-    // Plugins - active
-    std::unique_ptr<XmlElement> savedPluginListActive = [self getXmlValue:@"pluginListActive"];
-    if (savedPluginListActive != nil) {
-        activePluginList->recreateFromXml(*savedPluginListActive);
-    }
-
+    knownPluginList.addChangeListener(self);
+    
+    // Setup the main content and bind the graph change callback for saving
+    mainContent = std::make_unique<MainWindowContent>(deviceManager, knownPluginList, formatManager, graph);
+    
     [self loadActivePlugins];
     [self fillMenu];
+    
+    std::unique_ptr<XmlElement> savedGraphState(AppProperties::get()->getXmlValue("nodeGraphState"));
+    if (savedGraphState) {
+        mainContent->loadState(*savedGraphState);
+    }
+    
+    deviceManager->addAudioCallback(&player);
+    player.setProcessor(&graph);
+
 }
 
 - (void)applicationWillTerminate:(NSNotification *)aNotification {
-    // Insert code here to tear down your application
-
-    if (wPrefs) {
-        wPrefs->exitModalState(-1);
-        delete wPrefs;
-    }
-    if (wPlugins) {
-        wPlugins->exitModalState(-1);
-        delete wPlugins;
-    }
     PluginWindow::closeAllCurrentlyOpenWindows();
 
     [self savePluginStates];
+
+    // clear window before tearing down device manager & graph
+    mainWindow.reset();
+    mainContent.reset();
+
+    player.setProcessor(nil);
+    deviceManager->removeAudioCallback(&player);
     
-    player->setProcessor(nil);
-    deviceManager->removeAudioCallback(player.get());
-    
-    player = nil;
-    graph = nil;
-    activePluginList = nil;
-    knownPluginList = nil;
-    formatManager = nil;
     deviceManager = nil;
-    
     inputNode = nil;
     outputNode = nil;
 
-    lookAndFeel = nil;
+    LookAndFeel::setDefaultLookAndFeel(nullptr);
     delete juceMessageThread;
 }
 
@@ -104,222 +91,48 @@
 }
 
 - (void)loadActivePlugins {
-    AudioProcessorGraph::NodeID INPUT(1000000);
-    AudioProcessorGraph::NodeID OUTPUT(INPUT.uid + 1);
-    const int CHANNEL_ONE = 0;
-    const int CHANNEL_TWO = 1;
-    PluginWindow::closeAllCurrentlyOpenWindows();
+    // Set up the graph's fixed I/O nodes.
+    // Audio routing is now driven by the NodeGraphCanvas UI.
+    inputNode  = graph.addNode(std::make_unique<IOProcessor>(IOProcessor::audioInputNode),
+                     AudioProcessorGraph::NodeID(NodeGraphCanvas::kInputNodeUID));
+    outputNode = graph.addNode(std::make_unique<IOProcessor>(IOProcessor::audioOutputNode),
+                     AudioProcessorGraph::NodeID(NodeGraphCanvas::kOutputNodeUID));
 
-    graph->clear();
-    inputNode = graph->addNode(std::make_unique<AudioProcessorGraph::AudioGraphIOProcessor>(AudioProcessorGraph::AudioGraphIOProcessor::audioInputNode), INPUT);
-    outputNode = graph->addNode(std::make_unique<AudioProcessorGraph::AudioGraphIOProcessor>(AudioProcessorGraph::AudioGraphIOProcessor::audioOutputNode), OUTPUT);
-    
-    if (activePluginList->getNumTypes() == 0) {
-        graph->addConnection({{INPUT, CHANNEL_ONE}, {OUTPUT, CHANNEL_ONE}}, AudioProcessorGraph::UpdateKind::async);
-        graph->addConnection({{INPUT, CHANNEL_TWO}, {OUTPUT, CHANNEL_TWO}}, AudioProcessorGraph::UpdateKind::async);
-        
-        graph->rebuild();
-        return;
+    double sr = 44100.0;
+    int    bs = 512;
+    if (auto* dev = deviceManager->getCurrentAudioDevice())
+    {
+        sr = dev->getCurrentSampleRate();
+        bs = dev->getCurrentBufferSizeSamples();
     }
-    
-    // NOTE: Node ids cannot begin at 0.
-    AudioProcessorGraph::NodeID lastId(0);
-    bool hasInputConnected = false;
 
-    auto sortedPluginList = [self getActiveSortedList];
-    std::sort(sortedPluginList.begin(), sortedPluginList.end(), [&](const PluginDescription& a, const PluginDescription& b){
-        return [self getIntValue:[self getKey:@"order" :a]] < [self getIntValue:[self getKey:@"order" :b]];
-    });
-
-    for (auto& plugin : sortedPluginList) {
-        String errorMessage;
-        std::unique_ptr<AudioPluginInstance> instance = formatManager->createPluginInstance(plugin, graph->getSampleRate(), graph->getBlockSize(), errorMessage);
-        NSString* pluginUid = [self getKey:@"state" :plugin];
-        if (!instance) {
-            [self removeValue:pluginUid];
-            continue;
-        }
-        NSString* savedPluginState = [self getValue:pluginUid];
-        if (savedPluginState) {
-            MemoryBlock savedPluginBinary;
-            savedPluginBinary.fromBase64Encoding([savedPluginState UTF8String]);
-            instance->setStateInformation(savedPluginBinary.getData(), (int)savedPluginBinary.getSize());
-        }
-
-        AudioProcessorGraph::NodeID nextId(lastId.uid + 1);
-        graph->addNode(std::move(instance), nextId);
-        NSString* key = [self getKey:@"bypass" :plugin];
-        bool bypass = [self getBoolValue:key];
-        
-        // Input to plugin
-        if ((!hasInputConnected) && (!bypass)) {
-            graph->addConnection({{INPUT, CHANNEL_ONE}, {nextId, CHANNEL_ONE}}, AudioProcessorGraph::UpdateKind::async);
-            graph->addConnection({{INPUT, CHANNEL_TWO}, {nextId, CHANNEL_TWO}}, AudioProcessorGraph::UpdateKind::async);
-            hasInputConnected = true;
-        }
-        // Connect previous plugin to current
-        else if (!bypass) {
-            graph->addConnection({{lastId, CHANNEL_ONE}, {nextId, CHANNEL_ONE}}, AudioProcessorGraph::UpdateKind::async);
-            graph->addConnection({{lastId, CHANNEL_TWO}, {nextId, CHANNEL_TWO}}, AudioProcessorGraph::UpdateKind::async);
-        }
-        if (!bypass) {
-            lastId = nextId;
-        }
-    }
+    inputNode->getProcessor()->setPlayConfigDetails(1, 2, sr, bs);
+    inputNode->getProcessor()->prepareToPlay(sr, bs);
+    outputNode->getProcessor()->setPlayConfigDetails(2, 2, sr, bs);
+    outputNode->getProcessor()->prepareToPlay(sr, bs);
     
-    if (lastId.uid > 0) {
-        // Last active plugin to output
-        graph->addConnection({{lastId, CHANNEL_ONE}, {OUTPUT, CHANNEL_ONE}}, AudioProcessorGraph::UpdateKind::async);
-        graph->addConnection({{lastId, CHANNEL_TWO}, {OUTPUT, CHANNEL_TWO}}, AudioProcessorGraph::UpdateKind::async);
-    }
-    
-    graph->rebuild();
+    // NOTE: Plugin loading and connection routing is now handled by
+    // the NodeGraphCanvas (MainWindowContent). Draw wires in the canvas
+    // to route audio: Input → Plugin → Output.
 }
 
-- (void)savePluginStates {
-    auto sortedPluginList = [self getActiveSortedList];
-    AudioProcessorGraph::NodeID id(1);
-    
-    for (auto& plugin : sortedPluginList) {
-        AudioProcessorGraph::Node* node = graph->getNodeForId(id);
-        if (node == nullptr) {
-            continue; // EARLY CALL TO SAVE STATE??
-        }
-        AudioProcessor& processor = *node->getProcessor();
-        NSString* key = [self getKey:@"state" :plugin];
-        MemoryBlock savedStateBinary;
-        processor.getStateInformation(savedStateBinary);
-        [self setValue:key :savedStateBinary.toBase64Encoding()];
-        id.uid = id.uid + 1;
+- (void)showEditGraph {
+    if (!mainWindow) {
+        mainWindow = std::make_unique<MainWindow>(mainContent.get());
+    } else {
+        mainWindow->toFront(true);
     }
-}
-
-- (void)initAudioSettings {
-    AudioDeviceSelectorComponent* audioSettingsComp = new AudioDeviceSelectorComponent(*deviceManager, 0, 256, 0, 256, false, false, true, true);
-    audioSettingsComp->setSize(500, 450);
-    
-    DialogWindow::LaunchOptions o;
-    o.content.setOwned(audioSettingsComp);
-    o.dialogTitle                   = "Audio Settings";
-    o.dialogBackgroundColour = lookAndFeel->getCurrentColourScheme().getUIColour(LookAndFeel_V4::ColourScheme::windowBackground); // WTF
-    o.escapeKeyTriggersCloseButton  = true;
-    o.useNativeTitleBar             = true;
-    o.resizable                     = false;
-
-    wPrefs = o.create();
-}
-
-- (void)showAudioSettings {
-    if (!wPrefs) {
-        [self initAudioSettings];
-    }
-
-    if (wPrefs->runModalLoop() != -1) {
-        std::unique_ptr<XmlElement> audioState = deviceManager->createStateXml();
-        //const String& state = audioState->toString();
-        //[self setValue:@"audioDeviceState" :state];
-    }
-}
-
-- (void)initEditPlugins {
-    DialogWindow::LaunchOptions o;
-
-    const File deadMansPedalFile([self getFilePath:@"pedal.dat"]);
-    if (!deadMansPedalFile.getSize()) {
-        deadMansPedalFile.create();
-    }
-    
-    PluginListComponent* comp = new PluginListComponent(*formatManager,
-                                                        *knownPluginList,
-                                                        deadMansPedalFile,
-                                                        nil, true);
-    comp->setSize(900, 500);
-    //comp->setNumberOfThreadsForScanning(4);
-
-    o.content.setOwned(comp);
-    o.dialogTitle                   = "Available Plugins";
-    o.dialogBackgroundColour = lookAndFeel->getCurrentColourScheme().getUIColour(LookAndFeel_V4::ColourScheme::windowBackground); // WTF
-    o.escapeKeyTriggersCloseButton  = true;
-    o.resizable                     = true;
-    o.useNativeTitleBar             = true;
-
-    wPlugins = o.create();
-    //wPlugins->restoreWindowStateFromString([self getValue:@""]);
 }
 
 - (void)showEditPlugins {
-    if (!wPlugins) {
-        [self initEditPlugins];
-    }
-
-    int ret = wPlugins->runModalLoop();
-    [self removePluginsLackingInputOutput];
-    
-    if (ret != -1) {
-        [self fillMenu];
-        //[self setValue:@"" :w->getWindowStateAsString()];
-    }
+    [self reloadPlugins];
 }
 
 - (void)fillMenu {
     [appMenu removeAllItems];
 
-    [appMenu addItemWithTitle: @"Preferences" action:@selector(showAudioSettings)keyEquivalent:@"P"];
-    [appMenu addItemWithTitle: @"Edit Plugins" action:@selector(showEditPlugins)keyEquivalent:@"E"];
-    [appMenu addItem:[NSMenuItem separatorItem]];
-
-    if (@available(macOS 14.0, *)) {
-        [appMenu addItem:[NSMenuItem sectionHeaderWithTitle:@"Active Plugins"]];
-    } else {
-        [[appMenu addItemWithTitle: @"Active Plugins" action:nil keyEquivalent:@""] setEnabled:NO];
-    }
-    auto sortedPluginList = [self getActiveSortedList];
-    for (int i = 0; i < sortedPluginList.size(); ++i) {
-        auto plugin = sortedPluginList[i];
-        NSMenuItem* item = [appMenu addItemWithTitle:[NSString stringWithUTF8String:plugin.name.toStdString().c_str()] action:nil keyEquivalent:@""];
-        //item.indentationLevel = 1;
-        //[item.attributedTitle
-
-        [item setRepresentedObject:[NSNumber numberWithInt:i]];
-
-        NSMenu *submenu = [[NSMenu alloc] init];
-        [item setSubmenu:submenu];
-
-        NSString* key = [self getKey:@"bypass" :plugin];
-        BOOL bypass = [self getBoolValue:key];
-        
-        [submenu addItemWithTitle:@"Edit" action:@selector(onClickEdit:) keyEquivalent:@""];
-        [[submenu addItemWithTitle:@"Bypass" action:nil keyEquivalent:@""] setState:(bypass ? NSControlStateValueOn : NSControlStateValueOff)];
-        [submenu addItem:[NSMenuItem separatorItem]];
-        [submenu addItemWithTitle:@"Move Up" action:nil keyEquivalent:@""];
-        [submenu addItemWithTitle:@"Move Down" action:nil keyEquivalent:@""];
-        [submenu addItem:[NSMenuItem separatorItem]];
-        [submenu addItemWithTitle:@"Delete" action:nil keyEquivalent:@""];
-    }
-    [appMenu addItem:[NSMenuItem separatorItem]];
-
-    if (@available(macOS 14.0, *)) {
-        [appMenu addItem:[NSMenuItem sectionHeaderWithTitle:@"Avaliable Plugins"]];
-    } else {
-        [[appMenu addItemWithTitle: @"Avaliable Plugins" action:nil keyEquivalent:@""] setEnabled:NO];
-    }
-
-    auto pluginTree = KnownPluginList::createTree(knownPluginList->getTypes(), KnownPluginList::sortByManufacturer);
-    for (auto& sub : pluginTree->subFolders) {
-        NSMenuItem* item = [appMenu addItemWithTitle:[NSString stringWithUTF8String:sub->folder.toStdString().c_str()] action:nil keyEquivalent:@""];
-        NSMenu *submenu = [[NSMenu alloc] init];
-        //[submenu setAutoenablesItems:NO];
-        [item setSubmenu:submenu];
-        
-        for (auto& plugin : sub->plugins) {
-            NSMenuItem* pItem = [submenu addItemWithTitle:[NSString stringWithUTF8String:plugin.name.toStdString().c_str()] action:@selector(onClickAdd:) keyEquivalent:@""];
-            [pItem setRepresentedObject:[NSString stringWithUTF8String: plugin.createIdentifierString().toStdString().c_str()]];
-            if (std::find_if(sortedPluginList.begin(), sortedPluginList.end(), [&](const auto& p){return p.isDuplicateOf(plugin);}) != sortedPluginList.end()) {
-                [pItem setState:NSControlStateValueOn];
-                //[pItem setEnabled:NO];
-            }
-        }
-    }
+    [appMenu addItemWithTitle: @"Edit graph" action:@selector(showEditGraph)keyEquivalent:@"P"];
+    [appMenu addItemWithTitle: @"Plugin Finder" action:@selector(showEditPlugins)keyEquivalent:@"E"];
 
     [appMenu addItem:[NSMenuItem separatorItem]];
 
@@ -327,50 +140,44 @@
     [appMenu addItemWithTitle: @"Quit" action:@selector(terminate:) keyEquivalent:@"q"];
 }
 
-- (void)onClickEdit:(id)sender {
-    int idx = ((NSNumber*)[[sender parentItem] representedObject]).intValue;
-    AudioProcessorGraph::Node::Ptr f = graph->getNodeForId(AudioProcessorGraph::NodeID(idx + 1));
-
-    if (PluginWindow* const w = PluginWindow::getWindowFor(f, PluginWindow::Normal)) {
-        w->toFront(true);
-    }
-}
-
-- (void)onClickAdd:(id)sender {
-    String idString = [[sender representedObject] UTF8String];
-    auto plugin = knownPluginList->getTypeForIdentifierString(idString);
+- (void)savePluginStates {
+    // The graph now saves via nodeGraphState XML which includes plugin state info
+    // This method iterates actual graph nodes and creates a plugin state backup
+    // in case the node graph XML gets corrupted
     
-    if (!activePluginList->addType(*plugin)) {
-        return; // already present
+    for (const auto* node : graph.getNodes())
+    {
+        if (node == nullptr || node->getProcessor() == nullptr)
+            continue;
+            
+        auto* proc = node->getProcessor();
+        bool isInputOrOutput = (dynamic_cast<IOProcessor*>(proc) != nullptr);
+        if (isInputOrOutput)
+            continue;  // Skip input/output nodes
     }
-
-    NSString* key = [self getKey:@"order" :*plugin];
-    [self setValue:key :"time"];
-
-    [self savePluginStates];
-    [self loadActivePlugins];
-    [self fillMenu];
+    
+    AppProperties::saveIfNeeded();
 }
 
-- (Array<PluginDescription>)getActiveSortedList {
-    auto sortedPluginList = activePluginList->getTypes();
-    std::sort(sortedPluginList.begin(), sortedPluginList.end(), [&](const PluginDescription& a, const PluginDescription& b){
-        return [self getIntValue:[self getKey:@"order" :a]] < [self getIntValue:[self getKey:@"order" :b]];
-    });
-
-    return sortedPluginList;
+- (void)reloadPlugins {
+    if (!pluginListWindow) {
+        pluginListWindow.reset(new PluginListWindow(knownPluginList, formatManager));
+    }
+    pluginListWindow->toFront(true);
 }
 
 - (void)removePluginsLackingInputOutput {
+#if 0
     std::vector<PluginDescription> removeIndex;
-    for (auto& plugin : knownPluginList->getTypes()) {
+    for (auto& plugin : knownPluginList.getTypes()) {
         if (plugin.numInputChannels < 2 || plugin.numOutputChannels < 2) {
             removeIndex.push_back(plugin);
         }
     }
     for (auto& plugin : removeIndex) {
-        knownPluginList->removeType(plugin);
+        knownPluginList.removeType(plugin);
     }
+#endif
 }
 
 - (NSURL*)getSupportFolder {
@@ -421,4 +228,3 @@
 }
 
 @end
-

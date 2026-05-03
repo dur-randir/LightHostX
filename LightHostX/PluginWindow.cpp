@@ -1,57 +1,10 @@
-#include "JuceHeader.h"
 #include "PluginWindow.hpp"
 
 class PluginWindow;
 static Array <PluginWindow*> activePluginWindows;
 
-PluginWindow::PluginWindow (Component* const pluginEditor,
-                            AudioProcessorGraph::Node* const o,
-                            WindowFormatType t)
-    : DocumentWindow (pluginEditor->getName(), Colours::lightgrey, DocumentWindow::minimiseButton | DocumentWindow::closeButton), owner (o), type (t) 
-{
-    setSize(400, 300);
-    setUsingNativeTitleBar(true);
-    setContentOwned(pluginEditor, true);
-
-    setTopLeftPosition(Random::getSystemRandom().nextInt(500), Random::getSystemRandom().nextInt(500));
-
-    setVisible (true);
-
-    activePluginWindows.add(this);
-}
-
-void PluginWindow::closeCurrentlyOpenWindowsFor(const uint32 nodeId)
-{
-    for (int i = activePluginWindows.size(); --i >= 0;) {
-        if (activePluginWindows.getUnchecked(i)->owner->nodeID.uid == nodeId) {
-            delete activePluginWindows.getUnchecked (i);
-        }
-    }
-}
-
-void PluginWindow::closeAllCurrentlyOpenWindows()
-{
-    for (const auto& window : activePluginWindows) {
-        delete window;
-    }
-    activePluginWindows.clearQuick();
-
-    Component dummyModalComp;
-    dummyModalComp.enterModalState(false);
-    MessageManager::getInstance()->runDispatchLoopUntil(50);
-}
-
-bool PluginWindow::containsActiveWindows()
-{
-    return activePluginWindows.size() > 0;
-}
-
-void PluginWindow::closeButtonPressed()
-{
-    delete this;
-}
-
 //==============================================================================
+
 class ProcessorProgramPropertyComp : public PropertyComponent,
                                      private AudioProcessorListener
 {
@@ -83,27 +36,26 @@ private:
 class ProgramAudioProcessorEditor : public AudioProcessorEditor
 {
 public:
-    ProgramAudioProcessorEditor (AudioProcessor* const p)
+    ProgramAudioProcessorEditor (AudioProcessor& p)
         : AudioProcessorEditor (p)
     {
-        jassert (p != nullptr);
         setOpaque (true);
 
         addAndMakeVisible (panel);
 
         Array<PropertyComponent*> programs;
 
-        const int numPrograms = p->getNumPrograms();
+        const int numPrograms = p.getNumPrograms();
         int totalHeight = 0;
 
         for (int i = 0; i < numPrograms; ++i) {
-            String name(p->getProgramName(i).trim());
+            String name(p.getProgramName(i).trim());
 
             if (name.isEmpty()) {
                 name = "Unnamed";
             }
 
-            ProcessorProgramPropertyComp* const pc = new ProcessorProgramPropertyComp (name, *p, i);
+            ProcessorProgramPropertyComp* const pc = new ProcessorProgramPropertyComp (name, p, i);
             programs.add(pc);
             totalHeight += pc->getPreferredHeight();
         }
@@ -130,6 +82,27 @@ private:
 };
 
 //==============================================================================
+//
+//==============================================================================
+
+PluginWindow::PluginWindow (Component* const pluginEditor,
+                            AudioProcessorGraph::Node* const o,
+                            WindowFormatType t)
+    : DocumentWindow (pluginEditor->getName(), Colours::lightgrey, DocumentWindow::minimiseButton | DocumentWindow::closeButton), owner (o), type (t) 
+{
+    setSize(400, 300);
+    setUsingNativeTitleBar(true);
+    setContentOwned(pluginEditor, true);
+
+    setTopLeftPosition (owner->properties.getWithDefault (getLastXProp (type), Random::getSystemRandom().nextInt (500)),
+                        owner->properties.getWithDefault (getLastYProp (type), Random::getSystemRandom().nextInt (500)));
+
+    owner->properties.set (getOpenProp (type), true);
+    setVisible (true);
+
+    activePluginWindows.add(this);
+}
+
 PluginWindow* PluginWindow::getWindowFor (AudioProcessorGraph::Node* const node,
                                           WindowFormatType type)
 {
@@ -155,9 +128,9 @@ PluginWindow* PluginWindow::getWindowFor (AudioProcessorGraph::Node* const node,
 
     if (ui == nullptr) {
         if (type == Generic || type == Parameters) {
-            ui = new GenericAudioProcessorEditor (processor);
+            ui = new GenericAudioProcessorEditor (*processor);
         } else if (type == Programs) {
-            ui = new ProgramAudioProcessorEditor (processor);
+            ui = new ProgramAudioProcessorEditor (*processor);
         }
     }
 
@@ -176,4 +149,31 @@ PluginWindow::~PluginWindow()
 {
     activePluginWindows.removeFirstMatchingValue(this);
     clearContentComponent();
+}
+
+void PluginWindow::closeCurrentlyOpenWindowsFor(const uint32 nodeId) {
+    for (int i = activePluginWindows.size(); --i >= 0;) {
+        if (activePluginWindows.getUnchecked(i)->owner->nodeID.uid == nodeId) {
+            delete activePluginWindows.getUnchecked (i);
+        }
+    }
+}
+
+void PluginWindow::closeAllCurrentlyOpenWindows() {
+    for (int i = activePluginWindows.size(); --i >= 0;) {
+        delete activePluginWindows[i];
+    }
+    activePluginWindows.clear();
+
+    Component dummyModalComp;
+    dummyModalComp.enterModalState(false);
+    MessageManager::getInstance()->runDispatchLoopUntil(50);
+}
+
+bool PluginWindow::containsActiveWindows() {
+    return activePluginWindows.size() > 0;
+}
+
+void PluginWindow::closeButtonPressed() {
+    delete this;
 }
