@@ -11,20 +11,19 @@
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
     // Insert code here to initialize your application
-    
+
     NSStatusBar *bar = [NSStatusBar systemStatusBar];
     NSStatusItem *item = [bar statusItemWithLength:NSSquareStatusItemLength];
     item.button.image = [NSImage imageNamed:@"OldMenuIcon"];
     [item.button.image setTemplate:TRUE];
     item.button.title = @"";
-    
+
     appMenu = [NSMenu new];
     [item setMenu:appMenu];
     [item retain];
-    
+    [self fillMenu];
+
     juceMessageThread = new ScopedJuceInitialiser_GUI();
-    
-    settings = [NSUserDefaults standardUserDefaults];
     
     deviceManager = std::make_shared<AudioDeviceManager>();
     graph = std::make_shared<AudioProcessorGraph>();
@@ -51,10 +50,7 @@
     
     // Setup the main content and bind the graph change callback for saving
     mainContent = std::make_unique<MainWindowContent>(deviceManager, *knownPluginList, *formatManager, graph);
-    
-    [self loadActivePlugins];
-    [self fillMenu];
-    
+        
     std::unique_ptr<XmlElement> savedGraphState(AppProperties::get()->getXmlValue("nodeGraphState"));
     if (savedGraphState) {
         mainContent->loadState(*savedGraphState);
@@ -62,7 +58,6 @@
 
     deviceManager->addAudioCallback(player.get());
     player->setProcessor(graph.get());
-
 }
 
 - (void)applicationWillTerminate:(NSNotification *)aNotification {
@@ -79,8 +74,6 @@
     deviceManager->removeAudioCallback(player.get());
     
     deviceManager = nullptr;
-    inputNode = nullptr;
-    outputNode = nullptr;
     player = nullptr;
     graph = nullptr;
 
@@ -95,32 +88,6 @@
 
 - (BOOL)applicationSupportsSecureRestorableState:(NSApplication *)app {
     return YES;
-}
-
-- (void)loadActivePlugins {
-    // Set up the graph's fixed I/O nodes.
-    // Audio routing is now driven by the NodeGraphCanvas UI.
-    inputNode  = graph->addNode(std::make_unique<IOProcessor>(IOProcessor::audioInputNode),
-                     AudioProcessorGraph::NodeID(NodeGraphCanvas::kInputNodeUID));
-    outputNode = graph->addNode(std::make_unique<IOProcessor>(IOProcessor::audioOutputNode),
-                     AudioProcessorGraph::NodeID(NodeGraphCanvas::kOutputNodeUID));
-
-    double sr = 44100.0;
-    int    bs = 512;
-    if (auto* dev = deviceManager->getCurrentAudioDevice())
-    {
-        sr = dev->getCurrentSampleRate();
-        bs = dev->getCurrentBufferSizeSamples();
-    }
-
-    inputNode->getProcessor()->setPlayConfigDetails(1, 2, sr, bs);
-    inputNode->getProcessor()->prepareToPlay(sr, bs);
-    outputNode->getProcessor()->setPlayConfigDetails(2, 2, sr, bs);
-    outputNode->getProcessor()->prepareToPlay(sr, bs);
-    
-    // NOTE: Plugin loading and connection routing is now handled by
-    // the NodeGraphCanvas (MainWindowContent). Draw wires in the canvas
-    // to route audio: Input → Plugin → Output.
 }
 
 - (void)showEditGraph {

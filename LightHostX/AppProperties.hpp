@@ -24,7 +24,7 @@ public:
             options.applicationName     = "LightHostX";
             options.filenameSuffix      = "settings";
 
-            appProperties.reset(new ApplicationProperties());
+            appProperties = std::make_unique<ApplicationProperties>();
             appProperties->setStorageParameters(options);
         }
         

@@ -13,12 +13,9 @@
 #import "MainWindowContent.hpp"
 #import "PluginListWindow.hpp"
 
-using IOProcessor = AudioProcessorGraph::AudioGraphIOProcessor;
-
 @interface AppDelegate : NSObject<NSApplicationDelegate>
 {
     ScopedJuceInitialiser_GUI* juceMessageThread;
-    NSUserDefaults* settings;
     NSMenu* appMenu;
 
     std::shared_ptr<AudioDeviceManager> deviceManager;
@@ -28,9 +25,6 @@ using IOProcessor = AudioProcessorGraph::AudioGraphIOProcessor;
     std::unique_ptr<KnownPluginList> knownPluginList;
     std::unique_ptr<LookAndFeel_V3> lookAndFeel;
 
-    AudioProcessorGraph::Node::Ptr inputNode;
-    AudioProcessorGraph::Node::Ptr outputNode;
-    
     std::unique_ptr<MainWindow> mainWindow;
     std::unique_ptr<MainWindowContent> mainContent;
     std::unique_ptr<PluginListWindow> pluginListWindow;

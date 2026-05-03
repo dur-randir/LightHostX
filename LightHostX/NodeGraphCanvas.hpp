@@ -12,6 +12,7 @@
 #include "DeviceSelectorDialog.hpp"
 
 using AudioProcessorGraphSP = std::shared_ptr<AudioProcessorGraph>;
+using IOProcessor = AudioProcessorGraph::AudioGraphIOProcessor;
 
 namespace NP
 {
@@ -136,6 +137,9 @@ private:
     KnownPluginList&          knownPlugins;
     AudioPluginFormatManager& formatManager;
     AudioProcessorGraphSP     graph;
+
+    AudioProcessorGraph::Node::Ptr inputNode;
+    AudioProcessorGraph::Node::Ptr outputNode;
 
     std::vector<PluginNode> nodes;
     std::vector<NodeWire>   wires;

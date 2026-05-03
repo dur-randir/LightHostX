@@ -23,6 +23,26 @@ NodeGraphCanvas::NodeGraphCanvas(AudioDeviceManagerSP dm,
 {
     setOpaque(true);
     setWantsKeyboardFocus(true);  // Enable keyboard focus for Delete key handling
+    
+    // set up permanent nodes
+    inputNode  = graph->addNode(std::make_unique<IOProcessor>(IOProcessor::audioInputNode),
+                     AudioProcessorGraph::NodeID(NodeGraphCanvas::kInputNodeUID));
+    outputNode = graph->addNode(std::make_unique<IOProcessor>(IOProcessor::audioOutputNode),
+                     AudioProcessorGraph::NodeID(NodeGraphCanvas::kOutputNodeUID));
+
+    double sr = 44100.0;
+    int    bs = 512;
+    if (auto* dev = deviceManager->getCurrentAudioDevice())
+    {
+        sr = dev->getCurrentSampleRate();
+        bs = dev->getCurrentBufferSizeSamples();
+    }
+
+    inputNode->getProcessor()->setPlayConfigDetails(1, 2, sr, bs);
+    inputNode->getProcessor()->prepareToPlay(sr, bs);
+    outputNode->getProcessor()->setPlayConfigDetails(2, 2, sr, bs);
+    outputNode->getProcessor()->prepareToPlay(sr, bs);
+
 }
 
 // ============================================================
