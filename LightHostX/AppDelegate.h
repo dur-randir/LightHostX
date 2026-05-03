@@ -20,13 +20,14 @@ using IOProcessor = AudioProcessorGraph::AudioGraphIOProcessor;
     ScopedJuceInitialiser_GUI* juceMessageThread;
     NSUserDefaults* settings;
     NSMenu* appMenu;
-    LookAndFeel_V4 lookAndFeel;
 
     std::shared_ptr<AudioDeviceManager> deviceManager;
-    AudioPluginFormatManager formatManager;
-    KnownPluginList knownPluginList;
-    AudioProcessorGraph graph;
-    AudioProcessorPlayer player;
+    std::shared_ptr<AudioProcessorGraph> graph;
+    std::unique_ptr<AudioProcessorPlayer> player;
+    std::unique_ptr<AudioPluginFormatManager> formatManager;
+    std::unique_ptr<KnownPluginList> knownPluginList;
+    std::unique_ptr<LookAndFeel_V3> lookAndFeel;
+
     AudioProcessorGraph::Node::Ptr inputNode;
     AudioProcessorGraph::Node::Ptr outputNode;
     

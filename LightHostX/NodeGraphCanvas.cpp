@@ -15,10 +15,10 @@ static std::map<uint32, std::unique_ptr<PluginParameterListener>> g_pluginListen
 // NodeGraphCanvas — constructor
 // ============================================================
 
-NodeGraphCanvas::NodeGraphCanvas(AudioDeviceManager& dm,
+NodeGraphCanvas::NodeGraphCanvas(AudioDeviceManagerSP dm,
                                  KnownPluginList& kpl,
                                  AudioPluginFormatManager& fmt,
-                                 AudioProcessorGraph& g)
+                                 AudioProcessorGraphSP g)
     : deviceManager(dm), knownPlugins(kpl), formatManager(fmt), graph(g)
 {
     setOpaque(true);
@@ -111,34 +111,34 @@ void NodeGraphCanvas::addNode(const String& name, NodeType type)
 void NodeGraphCanvas::addGraphConnection(const PluginNode& from, const PluginNode& to)
 {
     // Verify that nodes exist in the graph
-    if (!graph.getNodeForId(from.graphNodeId)) {
+    if (!graph->getNodeForId(from.graphNodeId)) {
         DBG("WARNING: Source node " << String(from.graphNodeId.uid) << " not found in graph!");
         return;
     }
-    if (!graph.getNodeForId(to.graphNodeId)) {
+    if (!graph->getNodeForId(to.graphNodeId)) {
         DBG("WARNING: Target node " << String(to.graphNodeId.uid) << " not found in graph!");
         return;
     }
     
     DBG("Adding connection from " << String(from.graphNodeId.uid) << " to " << String(to.graphNodeId.uid));
     
-    if (!graph.addConnection({ { from.graphNodeId, 0 }, { to.graphNodeId, 0 } })) {
+    if (!graph->addConnection({ { from.graphNodeId, 0 }, { to.graphNodeId, 0 } })) {
         DBG("WARNING: Failed to add connection (channel 0)");
     }
     
     int from_ch = (from.type == NodeType::Input) ? 0 : 1;
-    if (!graph.addConnection({ { from.graphNodeId, from_ch }, { to.graphNodeId, 1 } })) {
+    if (!graph->addConnection({ { from.graphNodeId, from_ch }, { to.graphNodeId, 1 } })) {
         DBG("WARNING: Failed to add connection (channel 1)");
     }
     
-    graph.rebuild();  // Rebuild the graph topology to apply new connections
+    graph->rebuild();  // Rebuild the graph topology to apply new connections
 }
 
 void NodeGraphCanvas::removeGraphConnection(const PluginNode& from, const PluginNode& to)
 {
-    graph.removeConnection({ { from.graphNodeId, 0 }, { to.graphNodeId, 0 } });
-    graph.removeConnection({ { from.graphNodeId, 1 }, { to.graphNodeId, 1 } });
-    graph.rebuild();  // Rebuild the graph topology after removing connections
+    graph->removeConnection({ { from.graphNodeId, 0 }, { to.graphNodeId, 0 } });
+    graph->removeConnection({ { from.graphNodeId, 1 }, { to.graphNodeId, 1 } });
+    graph->rebuild();  // Rebuild the graph topology after removing connections
 }
 
 void NodeGraphCanvas::clearGraphInputConnections(const PluginNode& toNode)
@@ -192,7 +192,7 @@ void NodeGraphCanvas::disconnectNode(int nodeId)
         wires.erase(wires.begin() + wiresToRemove[idx]);
     }
     
-    graph.rebuild();
+    graph->rebuild();
     if (onGraphChanged) onGraphChanged();
     repaint();
 }
@@ -704,7 +704,7 @@ void NodeGraphCanvas::showPluginPicker(Point<int> canvasPos)
             String err;
             double sr = 44100.0;
             int    bs = 512;
-            if (auto* dev = deviceManager.getCurrentAudioDevice())
+            if (auto* dev = deviceManager->getCurrentAudioDevice())
             {
                 sr = dev->getCurrentSampleRate();
                 bs = dev->getCurrentBufferSizeSamples();
@@ -722,7 +722,7 @@ void NodeGraphCanvas::showPluginPicker(Point<int> canvasPos)
             instance->prepareToPlay(sr, bs);
 
             // addNode() returns Node::Ptr (ReferenceCountedObjectPtr), not Node*
-            auto nodePtr = graph.addNode(
+            auto nodePtr = graph->addNode(
                 std::unique_ptr<AudioProcessor>(std::move(instance)));
             if (!nodePtr) return;
             
@@ -764,7 +764,7 @@ void NodeGraphCanvas::openPluginEditor(int nodeId)
         if (nd.id == nodeId) { cn = &nd; break; }
     if (!cn || cn->type != NodeType::Plugin) return;
 
-    auto* graphNode = graph.getNodeForId(cn->graphNodeId);
+    auto* graphNode = graph->getNodeForId(cn->graphNodeId);
     if (!graphNode) return;
 
     // Open the plugin editor (Normal if available, otherwise Generic)
@@ -787,8 +787,8 @@ void NodeGraphCanvas::removeNode(int nodeId)
             {
                 // Clean up the listener
                 g_pluginListeners.erase(nd.graphNodeId.uid);
-                if (auto* graphNode = graph.getNodeForId(nd.graphNodeId))
-                    graph.removeNode(graphNode);
+                if (auto* graphNode = graph->getNodeForId(nd.graphNodeId))
+                    graph->removeNode(graphNode);
             }
             
             // Remove from visual nodes
@@ -802,7 +802,7 @@ void NodeGraphCanvas::removeNode(int nodeId)
                 wires.end());
             
             selectedNode = -1;
-            graph.rebuild();  // Rebuild graph after removing node
+            graph->rebuild();  // Rebuild graph after removing node
             if (onGraphChanged) onGraphChanged();
             repaint();
             return;
@@ -845,7 +845,7 @@ std::unique_ptr<XmlElement> NodeGraphCanvas::saveState() const
 
         if (n.type == NodeType::Plugin)
         {
-            if (auto* gNode = graph.getNodeForId(n.graphNodeId))
+            if (auto* gNode = graph->getNodeForId(n.graphNodeId))
             {
                 if (auto* proc = gNode->getProcessor())
                 {
@@ -935,7 +935,7 @@ void NodeGraphCanvas::loadState(const XmlElement& xml)
             String err;
             double sr = 44100.0;
             int bs = 512;
-            if (auto* dev = deviceManager.getCurrentAudioDevice())
+            if (auto* dev = deviceManager->getCurrentAudioDevice())
             {
                 sr = dev->getCurrentSampleRate();
                 bs = dev->getCurrentBufferSizeSamples();
@@ -953,7 +953,7 @@ void NodeGraphCanvas::loadState(const XmlElement& xml)
                 }
                 instance->setPlayConfigDetails(2, 2, sr, bs);
                 instance->prepareToPlay(sr, bs);
-                auto nodePtr = graph.addNode(std::unique_ptr<AudioProcessor>(std::move(instance)));
+                auto nodePtr = graph->addNode(std::unique_ptr<AudioProcessor>(std::move(instance)));
                 if (nodePtr)
                 {
                     n.graphNodeId = nodePtr->nodeID;
@@ -1008,6 +1008,6 @@ void NodeGraphCanvas::loadState(const XmlElement& xml)
         }
     }
 
-    graph.rebuild();
+    graph->rebuild();
     repaint();
 }

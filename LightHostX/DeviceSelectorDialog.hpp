@@ -10,6 +10,8 @@
 
 #include "JuceHeader.h"
 
+using AudioDeviceManagerSP = std::shared_ptr<AudioDeviceManager>;
+
 //==============================================================================
 // 音訊裝置選擇對話內容組件（DeviceSelectorDialog）
 // 說明：
@@ -19,7 +21,7 @@
 //   • 作為 DeviceSelectorWindow 的內容組件運作
 //   • 視窗關閉按鈕由父視窗管理
 //==============================================================================
-class DeviceSelectorDialog : public Component
+class DeviceSelectorDialog : public juce::Component
 {
 public:
     std::function<void()> onScaleChanged;
@@ -28,7 +30,7 @@ public:
     /// @param dm     音訊裝置管理器
     /// @param maxIn  最大輸入聲道數（0 表示隱藏輸入選項）
     /// @param maxOut 最大輸出聲道數（0 表示隱藏輸出選項）
-    DeviceSelectorDialog(AudioDeviceManager &dm, int maxIn, int maxOut);
+    DeviceSelectorDialog(AudioDeviceManagerSP dm, int maxIn, int maxOut);
 
     /// 解構函式
     ~DeviceSelectorDialog() override;
@@ -48,7 +50,7 @@ private:
     std::unique_ptr<AudioDeviceSelectorComponent> sel;
 
     /// 音訊裝置管理器參考
-    AudioDeviceManager &mgr;
+    AudioDeviceManagerSP mgr;
 
     /// 初始時的最大輸入/輸出聲道數
     int initialMaxIn, initialMaxOut;

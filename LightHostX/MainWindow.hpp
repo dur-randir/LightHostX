@@ -17,6 +17,7 @@ class MainWindow : public DocumentWindow
 public:
     MainWindow(MainWindowContent* content);
     void closeButtonPressed() override;
+    bool keyPressed(const KeyPress& key) override;
 
 private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainWindow)

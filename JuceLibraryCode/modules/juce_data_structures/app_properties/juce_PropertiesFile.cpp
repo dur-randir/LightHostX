@@ -86,7 +86,7 @@ File PropertiesFile::Options::getDefaultFile() const
            finds your old settings files in ~/Library/Preferences, moves them to ~/Library/Application Support,
            and then uses the new path.
         */
-        jassertfalse;
+        //jassertfalse;
 
         dir = dir.getChildFile ("Application Support");
     }

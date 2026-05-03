@@ -13,12 +13,11 @@
 //==============================================================================
 
 /// 建構函數：創建視窗並初始化對話框組件
-DeviceSelectorWindow::DeviceSelectorWindow(const String &title, AudioDeviceManager &dm,
-                                           int maxIn, int maxOut,
-                                           std::function<void(const String &)> cb)
+DeviceSelectorWindow::DeviceSelectorWindow(const String &title, AudioDeviceManagerSP dm, int maxIn, int maxOut, std::function<void(const String &)> cb)
     : DocumentWindow(title, Colours::lightgrey,
-                     DocumentWindow::closeButton | DocumentWindow::minimiseButton, true),
-      onConfirmCallback(std::move(cb))
+        DocumentWindow::closeButton | DocumentWindow::minimiseButton, true),
+        onConfirmCallback(std::move(cb)
+    )
 {
     // 創建並設定對話框組件
     auto *dlg = new DeviceSelectorDialog(dm, maxIn, maxOut);

@@ -9,6 +9,9 @@
 #define NodeGraphCanvas_hpp
 
 #include "JuceHeader.h"
+#include "DeviceSelectorDialog.hpp"
+
+using AudioProcessorGraphSP = std::shared_ptr<AudioProcessorGraph>;
 
 namespace NP
 {
@@ -101,10 +104,10 @@ public:
     static constexpr uint32 kInputNodeUID  = 1000000;
     static constexpr uint32 kOutputNodeUID = 1000001;
 
-    NodeGraphCanvas(AudioDeviceManager&      dm,
+    NodeGraphCanvas(AudioDeviceManagerSP      dm,
                     KnownPluginList&          knownPlugins,
                     AudioPluginFormatManager& fmt,
-                    AudioProcessorGraph&      graph);
+                    AudioProcessorGraphSP     graph);
     ~NodeGraphCanvas() override = default;
 
     /** Add an Input or Output side-panel node (graphNodeId pre-set to known IDs). */
@@ -129,10 +132,10 @@ public:
     bool keyPressed(const KeyPress& key) override;
 
 private:
-    AudioDeviceManager&       deviceManager;
+    AudioDeviceManagerSP      deviceManager;
     KnownPluginList&          knownPlugins;
     AudioPluginFormatManager& formatManager;
-    AudioProcessorGraph&      graph;
+    AudioProcessorGraphSP     graph;
 
     std::vector<PluginNode> nodes;
     std::vector<NodeWire>   wires;

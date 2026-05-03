@@ -29,7 +29,7 @@ public:
     /// @param maxIn      最大輸入聲道數
     /// @param maxOut     最大輸出聲道數
     /// @param cb         使用者選擇裝置後調用的回調函式
-    DeviceSelectorWindow(const String &title, AudioDeviceManager &dm,
+    DeviceSelectorWindow(const String &title, AudioDeviceManagerSP dm,
                          int maxIn, int maxOut,
                          std::function<void(const String &)> cb);
 

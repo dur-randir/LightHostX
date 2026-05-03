@@ -34,9 +34,14 @@ PluginListWindow::~PluginListWindow() {
 }
 
 void PluginListWindow::closeButtonPressed() {
-    //owner.removePluginsLackingInputOutput();
-
-    //owner.pluginListWindow = nullptr;
     this->setVisible(false);
 }
 
+bool PluginListWindow::keyPressed(const KeyPress& key)
+{
+    if (key.getKeyCode() == KeyPress::escapeKey) {
+        closeButtonPressed();
+        return true;
+    }
+    return false;
+}

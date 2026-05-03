@@ -29,5 +29,13 @@ MainWindow::MainWindow(MainWindowContent* content)
 
 void MainWindow::closeButtonPressed() {
     this->setVisible(false);
-    //owner.mainWindow = nullptr;
+}
+
+bool MainWindow::keyPressed(const KeyPress& key)
+{
+    if (key.getKeyCode() == KeyPress::escapeKey) {
+        closeButtonPressed();
+        return true;
+    }
+    return false;
 }

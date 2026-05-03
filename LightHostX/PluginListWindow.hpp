@@ -17,6 +17,7 @@ public:
     PluginListWindow(KnownPluginList& list, AudioPluginFormatManager& pluginFormatManager);
     ~PluginListWindow();
     void closeButtonPressed();
+    bool keyPressed(const KeyPress& key) override;
 
 private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginListWindow)

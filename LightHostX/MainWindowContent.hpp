@@ -14,10 +14,10 @@
 class MainWindowContent : public juce::Component
 {
 public:
-    MainWindowContent(AudioDeviceManager&       deviceManager,
+    MainWindowContent(AudioDeviceManagerSP      deviceManager,
                       KnownPluginList&          knownPlugins,
                       AudioPluginFormatManager& formatManager,
-                      AudioProcessorGraph&      graph);
+                      AudioProcessorGraphSP     graph);
     ~MainWindowContent() override = default;
 
     void resized() override;
@@ -31,7 +31,7 @@ public:
     void loadState(const XmlElement& xml);
 
 private:
-    AudioDeviceManager&       deviceManager;
+    AudioDeviceManagerSP       deviceManager;
 
     std::unique_ptr<NodeGraphCanvas> graphCanvas;
 

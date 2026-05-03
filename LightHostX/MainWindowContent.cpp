@@ -9,10 +9,10 @@
 #include "AppProperties.hpp"
 #include "DeviceSelectorWindow.hpp"
 
-MainWindowContent::MainWindowContent(AudioDeviceManager&      dm,
+MainWindowContent::MainWindowContent(AudioDeviceManagerSP      dm,
                                      KnownPluginList&          kpl,
                                      AudioPluginFormatManager& fmt,
-                                     AudioProcessorGraph&      g)
+                                     AudioProcessorGraphSP     g)
     : deviceManager(dm)
 {
     graphCanvas = std::make_unique<NodeGraphCanvas>(dm, kpl, fmt, g);
@@ -38,16 +38,14 @@ MainWindowContent::MainWindowContent(AudioDeviceManager&      dm,
 
 void MainWindowContent::saveState() {
     // Save audio device configuration
-    std::unique_ptr<XmlElement> audioState(deviceManager.createStateXml());
+    std::unique_ptr<XmlElement> audioState(deviceManager->createStateXml());
     AppProperties::get()->setValue("audioDeviceState", audioState.get());
     AppProperties::saveIfNeeded();
 }
 
 void MainWindowContent::showDialog(bool create, NodeType type) {
-    String name_ = type == NodeType::Input ? "Audio Input" : "Audio Output";
-    
     auto* wnd = new DeviceSelectorWindow(
-        name_,
+        type == NodeType::Input ? "Audio Input" : "Audio Output",
         deviceManager,
         type == NodeType::Input ? 256 : 0,
         type == NodeType::Output ? 256 : 0,
@@ -57,9 +55,8 @@ void MainWindowContent::showDialog(bool create, NodeType type) {
             }
             saveState();
         });
-    wnd->addToDesktop(ComponentPeer::windowIsResizable);
     wnd->setVisible(true);
-    wnd->toFront(true);
+    wnd->setAlwaysOnTop(true);
 }
 
 void MainWindowContent::paint(Graphics& g) {

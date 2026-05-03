@@ -174,6 +174,14 @@ bool PluginWindow::containsActiveWindows() {
     return activePluginWindows.size() > 0;
 }
 
+void PluginWindow::moved()
+{
+    owner->properties.set (getLastXProp (type), getX());
+    owner->properties.set (getLastYProp (type), getY());
+}
+
 void PluginWindow::closeButtonPressed() {
+    owner->properties.set (getOpenProp (type), false);
     delete this;
 }
+

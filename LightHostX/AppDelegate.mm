@@ -14,9 +14,9 @@
     
     NSStatusBar *bar = [NSStatusBar systemStatusBar];
     NSStatusItem *item = [bar statusItemWithLength:NSSquareStatusItemLength];
-    item.button.image = [NSImage imageNamed:@"MenuIcon"];
+    item.button.image = [NSImage imageNamed:@"OldMenuIcon"];
     [item.button.image setTemplate:TRUE];
-    item.button.title = @"LightHostX";
+    item.button.title = @"";
     
     appMenu = [NSMenu new];
     [item setMenu:appMenu];
@@ -24,20 +24,19 @@
     
     juceMessageThread = new ScopedJuceInitialiser_GUI();
     
-    NSString* osxMode = [[NSUserDefaults standardUserDefaults] stringForKey:@"AppleInterfaceStyle"];
-    
-    // getMidnightColourScheme with dark menu bg
-    lookAndFeel.setColourScheme((osxMode && [osxMode isEqualToString:@"Dark"]) ? LookAndFeel_V4::ColourScheme({ 0xff2f2f3a, 0xff191926, 0xff191926,
-        0xff66667c, 0xc8ffffff, 0xffd8d8d8,
-        0xffffffff, 0xff606073, 0xffd6d6d6 }) : LookAndFeel_V4::getLightColourScheme());
-    LookAndFeel::setDefaultLookAndFeel(&lookAndFeel);
-    
     settings = [NSUserDefaults standardUserDefaults];
     
     deviceManager = std::make_shared<AudioDeviceManager>();
-    
+    graph = std::make_shared<AudioProcessorGraph>();
+    player = std::make_unique<AudioProcessorPlayer>();
+    formatManager = std::make_unique<AudioPluginFormatManager>();
+    knownPluginList = std::make_unique<KnownPluginList>();
+    lookAndFeel = std::make_unique<LookAndFeel_V3>();
+
+    LookAndFeel::setDefaultLookAndFeel(lookAndFeel.get());
+
     // Audio device
-    formatManager.addDefaultFormats();
+    formatManager->addDefaultFormats();
     
     // Audio device
     std::unique_ptr<XmlElement> savedAudioState (AppProperties::get()->getXmlValue("audioDeviceState"));
@@ -46,12 +45,12 @@
     // Plugins - all
     std::unique_ptr<XmlElement> savedPluginList(AppProperties::get()->getXmlValue("pluginList"));
     if (savedPluginList) {
-        knownPluginList.recreateFromXml(*savedPluginList);
+        knownPluginList->recreateFromXml(*savedPluginList);
     }
-    knownPluginList.addChangeListener(self);
+    //knownPluginList.addChangeListener(self);
     
     // Setup the main content and bind the graph change callback for saving
-    mainContent = std::make_unique<MainWindowContent>(deviceManager, knownPluginList, formatManager, graph);
+    mainContent = std::make_unique<MainWindowContent>(deviceManager, *knownPluginList, *formatManager, graph);
     
     [self loadActivePlugins];
     [self fillMenu];
@@ -60,9 +59,9 @@
     if (savedGraphState) {
         mainContent->loadState(*savedGraphState);
     }
-    
-    deviceManager->addAudioCallback(&player);
-    player.setProcessor(&graph);
+
+    deviceManager->addAudioCallback(player.get());
+    player->setProcessor(graph.get());
 
 }
 
@@ -72,16 +71,24 @@
     [self savePluginStates];
 
     // clear window before tearing down device manager & graph
-    mainWindow.reset();
-    mainContent.reset();
+    mainWindow = nullptr;
+    mainContent = nullptr;
+    pluginListWindow = nullptr;
 
-    player.setProcessor(nil);
-    deviceManager->removeAudioCallback(&player);
+    player->setProcessor(nullptr);
+    deviceManager->removeAudioCallback(player.get());
     
-    deviceManager = nil;
-    inputNode = nil;
-    outputNode = nil;
+    deviceManager = nullptr;
+    inputNode = nullptr;
+    outputNode = nullptr;
+    player = nullptr;
+    graph = nullptr;
 
+    formatManager = nullptr;
+    knownPluginList = nullptr;
+    lookAndFeel = nullptr;
+
+    AppProperties::destroy();
     LookAndFeel::setDefaultLookAndFeel(nullptr);
     delete juceMessageThread;
 }
@@ -93,9 +100,9 @@
 - (void)loadActivePlugins {
     // Set up the graph's fixed I/O nodes.
     // Audio routing is now driven by the NodeGraphCanvas UI.
-    inputNode  = graph.addNode(std::make_unique<IOProcessor>(IOProcessor::audioInputNode),
+    inputNode  = graph->addNode(std::make_unique<IOProcessor>(IOProcessor::audioInputNode),
                      AudioProcessorGraph::NodeID(NodeGraphCanvas::kInputNodeUID));
-    outputNode = graph.addNode(std::make_unique<IOProcessor>(IOProcessor::audioOutputNode),
+    outputNode = graph->addNode(std::make_unique<IOProcessor>(IOProcessor::audioOutputNode),
                      AudioProcessorGraph::NodeID(NodeGraphCanvas::kOutputNodeUID));
 
     double sr = 44100.0;
@@ -119,20 +126,28 @@
 - (void)showEditGraph {
     if (!mainWindow) {
         mainWindow = std::make_unique<MainWindow>(mainContent.get());
-    } else {
-        mainWindow->toFront(true);
+        mainWindow->setAlwaysOnTop(true);
     }
+
+    mainWindow->setVisible(true);
+    mainWindow->grabKeyboardFocus();
 }
 
 - (void)showEditPlugins {
-    [self reloadPlugins];
+    if (!pluginListWindow) {
+        pluginListWindow = std::make_unique<PluginListWindow>(*knownPluginList, *formatManager);
+        pluginListWindow->setAlwaysOnTop(true);
+    }
+
+    pluginListWindow->setVisible(true);
+    pluginListWindow->grabKeyboardFocus();
 }
 
 - (void)fillMenu {
     [appMenu removeAllItems];
 
-    [appMenu addItemWithTitle: @"Edit graph" action:@selector(showEditGraph)keyEquivalent:@"P"];
-    [appMenu addItemWithTitle: @"Plugin Finder" action:@selector(showEditPlugins)keyEquivalent:@"E"];
+    [appMenu addItemWithTitle: @"Edit Graph" action:@selector(showEditGraph)keyEquivalent:@"E"];
+    [appMenu addItemWithTitle: @"Plugin Finder" action:@selector(showEditPlugins)keyEquivalent:@"P"];
 
     [appMenu addItem:[NSMenuItem separatorItem]];
 
@@ -145,7 +160,7 @@
     // This method iterates actual graph nodes and creates a plugin state backup
     // in case the node graph XML gets corrupted
     
-    for (const auto* node : graph.getNodes())
+    for (const auto* node : graph->getNodes())
     {
         if (node == nullptr || node->getProcessor() == nullptr)
             continue;
@@ -157,74 +172,6 @@
     }
     
     AppProperties::saveIfNeeded();
-}
-
-- (void)reloadPlugins {
-    if (!pluginListWindow) {
-        pluginListWindow.reset(new PluginListWindow(knownPluginList, formatManager));
-    }
-    pluginListWindow->toFront(true);
-}
-
-- (void)removePluginsLackingInputOutput {
-#if 0
-    std::vector<PluginDescription> removeIndex;
-    for (auto& plugin : knownPluginList.getTypes()) {
-        if (plugin.numInputChannels < 2 || plugin.numOutputChannels < 2) {
-            removeIndex.push_back(plugin);
-        }
-    }
-    for (auto& plugin : removeIndex) {
-        knownPluginList.removeType(plugin);
-    }
-#endif
-}
-
-- (NSURL*)getSupportFolder {
-    NSError *error;
-    NSFileManager *manager = [NSFileManager defaultManager];
-    NSURL *applicationSupport = [manager URLForDirectory:NSApplicationSupportDirectory inDomain:NSUserDomainMask appropriateForURL:nil create:false error:&error];
-    NSString *identifier = [[NSBundle mainBundle] bundleIdentifier];
-    NSURL *folder = [applicationSupport URLByAppendingPathComponent:identifier];
-    [manager createDirectoryAtURL:folder withIntermediateDirectories:true attributes:nil error:&error];
-    return folder;
-}
-    
-- (String)getFilePath:(NSString*)name {
-    NSURL* fullPath = [[self getSupportFolder] URLByAppendingPathComponent:name];
-    return [fullPath.path UTF8String];
-}
-
-- (NSString*)getKey:(NSString*)type :(PluginDescription)plugin {
-    return [NSString stringWithFormat:@"plugin-%@-%s%s%s", [type lowercaseString], plugin.name.toStdString().c_str(), plugin.version.toStdString().c_str(), plugin.pluginFormatName.toStdString().c_str()];
-}
-
-- (std::unique_ptr<XmlElement>)getXmlValue:(NSString*)keyName {
-    NSString* xml = [settings stringForKey:keyName];
-    //return parseXML([xml cStringUsingEncoding:NSUTF8StringEncoding]);
-    return parseXML([xml UTF8String]);
-}
-
-- (BOOL)getBoolValue:(NSString*)keyName {
-    return [settings boolForKey:keyName];
-}
-
-- (NSString*)getValue:(NSString*)keyName {
-    NSString* ret = [settings stringForKey:keyName];
-    return ret;
-}
-
-- (NSInteger)getIntValue:(NSString*)keyName {
-    return [settings integerForKey:keyName];
-}
-
-- (void)setValue:(NSString*)keyName :(const String&)data {
-    if ((0))
-    [settings setValue:[NSString stringWithUTF8String:data.toStdString().c_str()] forKey:keyName];
-}
-
-- (void)removeValue:(NSString*)keyName {
-    [settings removeObjectForKey:keyName];
 }
 
 @end

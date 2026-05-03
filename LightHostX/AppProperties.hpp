@@ -12,7 +12,7 @@
 
 class AppProperties {
 private:
-    static std::unique_ptr<ApplicationProperties> appProperties;
+    inline static std::unique_ptr<ApplicationProperties> appProperties;
     inline static bool initialized = false;
 
 public:
@@ -24,6 +24,7 @@ public:
             options.applicationName     = "LightHostX";
             options.filenameSuffix      = "settings";
 
+            appProperties.reset(new ApplicationProperties());
             appProperties->setStorageParameters(options);
         }
         
@@ -34,6 +35,13 @@ public:
         if (initialized) {
             appProperties->saveIfNeeded();
         }
+    }
+    
+    static void destroy() {
+        if (initialized) {
+            appProperties->saveIfNeeded();
+        }
+        appProperties.reset();
     }
 };
 

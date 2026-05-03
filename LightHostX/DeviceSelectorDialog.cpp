@@ -13,7 +13,7 @@
 //==============================================================================
 
 /// 建構函數：初始化對話框，創建音訊設備選擇器並應用縮放
-DeviceSelectorDialog::DeviceSelectorDialog(AudioDeviceManager &dm, int maxIn, int maxOut)
+DeviceSelectorDialog::DeviceSelectorDialog(AudioDeviceManagerSP dm, int maxIn, int maxOut)
     : mgr(dm), initialMaxIn(maxIn), initialMaxOut(maxOut)
 {
     updateSelectorComponent();
@@ -53,7 +53,7 @@ void DeviceSelectorDialog::updateSelectorComponent()
     // initialMaxOut : 最大輸出通道數
     // false ×4     : 不顯示 MIDI、音訊設定、進階選項
     sel = std::make_unique<AudioDeviceSelectorComponent>(
-        mgr, 0, initialMaxIn, 0, initialMaxOut, false, false, false, false
+        *mgr, 0, initialMaxIn, 0, initialMaxOut, false, false, false, false
     );
 
     //auto& selectorLookAndFeel = getScaledSelectorLookAndFeel();
@@ -81,7 +81,7 @@ void DeviceSelectorDialog::updateSelectorComponent()
 String DeviceSelectorDialog::getCurrentDeviceName() const
 {
     String name = "<Unknown>";
-    if (auto *d = mgr.getCurrentAudioDevice()) {
+    if (auto *d = mgr->getCurrentAudioDevice()) {
         name = d->getName();
     }
     return name;
