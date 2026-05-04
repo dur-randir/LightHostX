@@ -94,23 +94,21 @@
 - (void)showEditGraph {
     if (!mainWindow) {
         mainWindow = std::make_unique<MainWindow>(mainContent.get());
-        mainWindow->setAlwaysOnTop(true);
     }
 
     Process::makeForegroundProcess();
     mainWindow->setVisible(true);
-    mainWindow->grabKeyboardFocus();
+    mainWindow->toFront(true);
 }
 
 - (void)showEditPlugins {
     if (!pluginListWindow) {
         pluginListWindow = std::make_unique<PluginListWindow>(*knownPluginList, *formatManager);
-        pluginListWindow->setAlwaysOnTop(true);
     }
 
     Process::makeForegroundProcess();
     pluginListWindow->setVisible(true);
-    pluginListWindow->grabKeyboardFocus();
+    pluginListWindow->toFront(true);
 }
 
 - (void)fillMenu {
