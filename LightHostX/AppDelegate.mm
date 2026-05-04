@@ -96,9 +96,10 @@
         mainWindow = std::make_unique<MainWindow>(mainContent.get());
     }
 
-    Process::makeForegroundProcess();
     mainWindow->setVisible(true);
+    mainWindow->setAlwaysOnTop(true);
     mainWindow->toFront(true);
+    mainWindow->setAlwaysOnTop(false);
 }
 
 - (void)showEditPlugins {
@@ -106,9 +107,10 @@
         pluginListWindow = std::make_unique<PluginListWindow>(*knownPluginList, *formatManager);
     }
 
-    Process::makeForegroundProcess();
     pluginListWindow->setVisible(true);
+    pluginListWindow->setAlwaysOnTop(true);
     pluginListWindow->toFront(true);
+    pluginListWindow->setAlwaysOnTop(false);
 }
 
 - (void)fillMenu {
