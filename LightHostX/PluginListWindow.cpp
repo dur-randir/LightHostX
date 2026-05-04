@@ -40,12 +40,15 @@ void PluginListWindow::closeButtonPressed() {
 void PluginListWindow::changeListenerCallback(ChangeBroadcaster* changed)
 {
     if (auto knownPluginList = dynamic_cast<KnownPluginList*>(changed)) {
-        std::unique_ptr<XmlElement> savedPluginList (knownPluginList->createXml());
+        MessageManager::callAsync([knownPluginList]{
+            std::unique_ptr<XmlElement> savedPluginList (knownPluginList->createXml());
 
-        if (savedPluginList != nullptr) {
-            AppProperties::get()->setValue ("pluginList", savedPluginList.get());
-            AppProperties::saveIfNeeded();
-        }
+            if (savedPluginList != nullptr) {
+                AppProperties::get()->setValue ("pluginList", savedPluginList.get());
+                AppProperties::saveIfNeeded();
+            }
+
+        });
     }
 }
 bool PluginListWindow::keyPressed(const KeyPress& key)

@@ -31,6 +31,7 @@ public:
 private:
     AudioDeviceManagerSP             deviceManager;
     std::unique_ptr<NodeGraphCanvas> graphCanvas;
+    std::atomic<int> posted;
 
     void showDialog(bool create, NodeType type);
 };

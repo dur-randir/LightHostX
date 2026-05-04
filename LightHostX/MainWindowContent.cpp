@@ -13,7 +13,7 @@ MainWindowContent::MainWindowContent(AudioDeviceManagerSP      dm,
                                      KnownPluginList&          kpl,
                                      AudioPluginFormatManager& fmt,
                                      AudioProcessorGraphSP     g)
-    : deviceManager(dm)
+    : deviceManager(dm), posted(0)
 {
     graphCanvas = std::make_unique<NodeGraphCanvas>(dm, kpl, fmt, g);
 
@@ -27,10 +27,16 @@ MainWindowContent::MainWindowContent(AudioDeviceManagerSP      dm,
         if (onManagePlugins) onManagePlugins();
     };
     graphCanvas->onGraphChanged     = [this] {
-        if (auto xml = this->saveState()) {
-            AppProperties::get()->setValue("nodeGraphState", xml.get());
-            AppProperties::saveIfNeeded();
-        }
+        if (posted) return;
+        posted++;
+
+        MessageManager::callAsync([this] {
+            if (auto xml = this->saveState()) {
+                AppProperties::get()->setValue("nodeGraphState", xml.get());
+                AppProperties::saveIfNeeded();
+            }
+            posted = 0;
+        });
     };
     graphCanvas->onEditNode         = [this] (int /*nodeId*/, NodeType type) {
         showDialog(false, type);

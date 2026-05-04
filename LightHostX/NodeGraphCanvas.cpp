@@ -738,7 +738,8 @@ void NodeGraphCanvas::showPluginPicker(Point<int> canvasPos)
             if (auto* proc = nodePtr->getProcessor())
             {
                 auto listener = std::make_unique<PluginParameterListener>(
-                    [this] { if (onGraphChanged) onGraphChanged(); });
+                    [this] { if (onGraphChanged) onGraphChanged(); }
+                );
                 proc->addListener(listener.get());
                 // Store the listener in global map to keep it alive
                 g_pluginListeners[nodePtr->nodeID.uid] = std::move(listener);
