@@ -23,7 +23,7 @@ DeviceSelectorWindow::DeviceSelectorWindow(const String &title, AudioDeviceManag
     auto *dlg = new DeviceSelectorDialog(dm, maxIn, maxOut);
 
     // 設定視窗風格
-    setContentOwned(dlg, true);   // 視窗擁有對話框生命週期
+    setContentOwned(dlg, false);   // 視窗擁有對話框生命週期
     setUsingNativeTitleBar(true); // 使用 Windows 原生標題欄
     setResizable(false, false);   // 禁用調整大小（由計時器控制）
     setBackgroundColour(Colour::fromRGB(236, 236, 236));

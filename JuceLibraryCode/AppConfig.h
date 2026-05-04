@@ -21,7 +21,6 @@
 // [END_USER_CODE_SECTION]
 
 #define JUCE_PROJUCER_VERSION 0x80001
-#define JUCE_DISABLE_ASSERTIONS 1
 
 //==============================================================================
 #define JUCE_MODULE_AVAILABLE_juce_audio_basics          1
