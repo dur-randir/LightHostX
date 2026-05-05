@@ -464,16 +464,17 @@ void NodeGraphCanvas::mouseDoubleClick(const MouseEvent& e)
     const int hit = nodeAtPoint(e.getPosition());
     if (hit >= 0)
     {
-        for (const auto& nd : nodes)
+        for (const auto& nd : nodes) {
             if (nd.id == hit)
             {
-                if (nd.type == NodeType::Plugin) openPluginEditor(hit);
-                else {
+                if (nd.type == NodeType::Plugin) {
+                    openPluginEditor(hit);
+                } else {
                     if (onEditNode) onEditNode(hit, nd.type);
                 }
                 return;
             }
-        return;
+        }
     }
 }
 
