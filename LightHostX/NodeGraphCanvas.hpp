@@ -188,10 +188,10 @@ private:
     void drawWire(Graphics& g, juce::Point<int> a, juce::Point<int> b, bool active) const;
 
     // ---- Hit testing -------------------------------------------------
-    int  nodeAtPoint   (juce::Point<int> p) const;
-    bool nearOutputPort(juce::Point<int> p, int& outId) const;
-    bool nearInputPort (juce::Point<int> p, int& outId) const;
-    bool isValidWire   (int fromId, int toId) const;
+    PluginNode  nodeAtPoint   (juce::Point<int> p) const;
+    bool        nearOutputPort(juce::Point<int> p, int& outId) const;
+    bool        nearInputPort (juce::Point<int> p, int& outId) const;
+    bool        isValidWire   (int fromId, int toId) const;
 
     // ---- Graph interaction -------------------------------------------
     /** Connect two canvas nodes in the AudioProcessorGraph (stereo, ch 0+1). */
@@ -207,6 +207,7 @@ private:
     void showPluginPicker(juce::Point<int> canvasPos);
     void openPluginEditor(int nodeId);
     void removeNode(int nodeId);
+    void toggleBypass(int nodeId);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(NodeGraphCanvas)
 };

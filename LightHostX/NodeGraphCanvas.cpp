@@ -261,9 +261,9 @@ void NodeGraphCanvas::drawZoneBackgrounds(Graphics& g) const
 
 void NodeGraphCanvas::drawNode(Graphics& g, const PluginNode& n) const
 {
-    // --- Side-panel style rows ---
     if (n.type == NodeType::Input || n.type == NodeType::Output)
     {
+        // --- Side-panel style rows ---
         const bool isInput = (n.type == NodeType::Input);
         const auto b = nodeBounds(n);
 
@@ -293,45 +293,54 @@ void NodeGraphCanvas::drawNode(Graphics& g, const PluginNode& n) const
         g.fillEllipse(portPt.x - pr, portPt.y - pr, pr*2, pr*2);
         g.setColour(NP::nodeBorder);
         g.drawEllipse(portPt.x - pr, portPt.y - pr, pr*2, pr*2, 1.f);
-        return;
-    }
 
-    // --- Floating plugin node ---
-    const auto bf = n.bounds().toFloat();
-    g.setColour(Colour(0x40000000));
-    g.fillRoundedRectangle(bf.translated(2, 2), 6.f);
-    g.setColour(NP::nodePlugin);
-    g.fillRoundedRectangle(bf, 6.f);
-    g.setColour(NP::nodeBorder);
-    g.drawRoundedRectangle(bf, 6.f, 1.5f);
-    
-    // Draw selection highlight (yellow border)
-    if (selectedNode == n.id)
-    {
-        g.setColour(Colour(0xFFFFDD00));
-        g.drawRoundedRectangle(bf.expanded(2.f), 6.f, 3.f);
-    }
+    } else {
+        // --- Floating plugin node ---
+        bool bypassed = false;
+        if (auto* graphNode = graph->getNodeForId(n.graphNodeId)) {
+            bypassed = graphNode->isBypassed();
+        }
 
-    g.setColour(NP::nodeText);
-    g.setFont(Font(FontOptions{}.withHeight(12.f).withStyle("Bold")));
-    g.drawText(n.name, n.bounds().reduced(PluginNode::getPortRadius() + 4, 0), Justification::centred, true
-    );
-
-    g.setColour(NP::nodeHint);
-    g.setFont(Font(FontOptions{}.withHeight(10.f)));
-    g.drawText("double-click", n.bounds().withTrimmedTop(n.bounds().getHeight() / 2 + 2), Justification::centred, false
-    );
-
-    auto drawPort = [&](Point<int> pt, Colour col)
-    {
-        const float pr = (float)PluginNode::getPortRadius();
-        g.setColour(col);
-        g.fillEllipse(pt.x - pr, pt.y - pr, pr*2, pr*2);
+        const auto bf = n.bounds().toFloat();
+        g.setColour(Colour(0x40000000));
+        g.fillRoundedRectangle(bf.translated(2, 2), 6.f);
+        if (!bypassed) {
+            g.setColour(NP::nodePlugin);
+        } else {
+            g.setColour(NP::nodeOut);
+        }
+        g.fillRoundedRectangle(bf, 6.f);
         g.setColour(NP::nodeBorder);
-        g.drawEllipse(pt.x - pr, pt.y - pr, pr*2, pr*2, 1.f);
-    };
-    drawPort(n.inputPort(),  NP::portIn);
-    drawPort(n.outputPort(), NP::portOut);
+        g.drawRoundedRectangle(bf, 6.f, 1.5f);
+        
+        // Draw selection highlight (yellow border)
+        if (selectedNode == n.id)
+        {
+            g.setColour(Colour(0xFFFFDD00));
+            g.drawRoundedRectangle(bf.expanded(2.f), 6.f, 3.f);
+        }
+        
+        g.setColour(NP::nodeText);
+        g.setFont(Font(FontOptions{}.withHeight(12.f).withStyle("Bold")));
+        g.drawText(n.name, n.bounds().reduced(PluginNode::getPortRadius() + 4, 0), Justification::centred, true
+                   );
+        
+        g.setColour(NP::nodeHint);
+        g.setFont(Font(FontOptions{}.withHeight(10.f)));
+        g.drawText("double-click", n.bounds().withTrimmedTop(n.bounds().getHeight() / 2 + 2), Justification::centred, false
+                   );
+        
+        auto drawPort = [&](Point<int> pt, Colour col)
+        {
+            const float pr = (float)PluginNode::getPortRadius();
+            g.setColour(col);
+            g.fillEllipse(pt.x - pr, pt.y - pr, pr*2, pr*2);
+            g.setColour(NP::nodeBorder);
+            g.drawEllipse(pt.x - pr, pt.y - pr, pr*2, pr*2, 1.f);
+        };
+        drawPort(n.inputPort(),  NP::portIn);
+        drawPort(n.outputPort(), NP::portOut);
+    }
 }
 
 void NodeGraphCanvas::drawWire(Graphics& g, Point<int> a, Point<int> b, bool active) const
@@ -414,11 +423,11 @@ void NodeGraphCanvas::paint(Graphics& g)
 // Hit testing
 // ============================================================
 
-int NodeGraphCanvas::nodeAtPoint(Point<int> p) const
+PluginNode NodeGraphCanvas::nodeAtPoint(Point<int> p) const
 {
     for (auto it = nodes.rbegin(); it != nodes.rend(); ++it)
-        if (nodeBounds(*it).contains(p)) return it->id;
-    return -1;
+        if (nodeBounds(*it).contains(p)) return *it;
+    return {};
 }
 
 bool NodeGraphCanvas::nearOutputPort(Point<int> p, int& outId) const
@@ -461,42 +470,32 @@ bool NodeGraphCanvas::isValidWire(int fromId, int toId) const
 
 void NodeGraphCanvas::mouseDoubleClick(const MouseEvent& e)
 {
-    const int hit = nodeAtPoint(e.getPosition());
-    if (hit >= 0)
+    PluginNode nd = nodeAtPoint(e.getPosition());
+    if (nd.id)
     {
-        for (const auto& nd : nodes) {
-            if (nd.id == hit)
-            {
-                if (nd.type == NodeType::Plugin) {
-                    openPluginEditor(hit);
-                } else {
-                    if (onEditNode) onEditNode(hit, nd.type);
-                }
-                return;
-            }
+        if (nd.type == NodeType::Plugin) {
+            openPluginEditor(nd.id);
+        } else {
+            if (onEditNode) onEditNode(nd.id, nd.type);
         }
     }
 }
 
 void NodeGraphCanvas::mouseDown(const MouseEvent& e)
 {
-    selectedNode = nodeAtPoint(e.getPosition());
+    PluginNode nd = nodeAtPoint(e.getPosition());
+    int hitNode = nd.id; // for capture
+    selectedNode = nd.id ? nd.id : -1;
     repaint();
     
     // ================== RIGHT-CLICK: Context Menu ==================
     if (e.mods.isRightButtonDown())
     {
-        const int hitNode = nodeAtPoint(e.getPosition());
-        const Zone zone = zoneAt(e.getPosition());
         const auto screenPos = localPointToGlobal(e.getPosition());
         
-        if (hitNode >= 0)
+        if (nd.id)
         {
             // Right-click on a node
-            for (const auto& nd : nodes)
-            {
-                if (nd.id != hitNode) continue;
-                
                 if (nd.type == NodeType::Input)
                 {
                     // Input node: New Input, Disconnect, Delete
@@ -531,23 +530,24 @@ void NodeGraphCanvas::mouseDown(const MouseEvent& e)
                 {
                     // Plugin node: New Plugin, Disconnect, Delete
                     PopupMenu m;
-                    m.addItem(1, "Add Plugin");
+                    m.addItem(1, "Toggle Bypass");
                     m.addItem(2, "Disconnect All Wires");
                     m.addSeparator();
                     m.addItem(3, "Delete");
                     m.showMenuAsync(PopupMenu::Options().withTargetScreenArea({screenPos.x, screenPos.y, 1, 1}),
                         [this, hitNode, ePos = e.getPosition()](int result) {
-                            if (result == 1) showPluginPicker(ePos);
+                            if (result == 1) toggleBypass(hitNode);
                             else if (result == 2) disconnectNode(hitNode);
                             else if (result == 3) removeNode(hitNode);
                         });
                 }
                 return;
-            }
         }
         else
         {
             // Right-click on empty area
+            const Zone zone = zoneAt(e.getPosition());
+
             if (zone == Zone::Left)
             {
                 PopupMenu m;
@@ -779,6 +779,18 @@ void NodeGraphCanvas::openPluginEditor(int nodeId)
 
     // Open the plugin editor (Normal if available, otherwise Generic)
     PluginWindow::getWindowFor(graphNode, PluginWindow::Normal);
+}
+
+void NodeGraphCanvas::toggleBypass(int nodeId) {
+    for (const auto& nd : nodes) {
+        if (nd.id == nodeId) {
+            if (auto* graphNode = graph->getNodeForId(nd.graphNodeId)) {
+                graphNode->setBypassed(!graphNode->isBypassed());
+            }
+
+            repaint();
+        }
+    }
 }
 
 // ============================================================
