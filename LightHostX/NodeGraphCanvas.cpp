@@ -418,7 +418,7 @@ void NodeGraphCanvas::paint(Graphics& g)
     {
         g.setColour(Colour(0xFF999999));
         g.setFont(Font(FontOptions{}.withHeight(11.f)));
-        g.drawText("Right-click to add a plugin",
+        g.drawText("Double-click to add a plugin",
             Rectangle<int>(getZoneWidth(), 0, getWidth()-2*getZoneWidth(), getHeight()), Justification::centred, false
         );
     }
@@ -472,6 +472,19 @@ bool NodeGraphCanvas::isValidWire(int fromId, int toId) const
 // ============================================================
 // Mouse events
 // ============================================================
+
+void NodeGraphCanvas::mouseDoubleClick(const MouseEvent& e)
+{
+    PluginNode nd = nodeAtPoint(e.getPosition());
+    if (nd.id)
+    {
+        if (nd.type == NodeType::Plugin) {
+            openPluginEditor(nd.id);
+        } else {
+            showDeviceDialog(nd.type);
+        }
+    }
+}
 
 void NodeGraphCanvas::mouseDown(const MouseEvent& e)
 {
