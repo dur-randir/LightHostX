@@ -32,6 +32,8 @@ private:
     std::unique_ptr<NodeGraphCanvas> graphCanvas;
 
     void showDialog(NodeType type);
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainWindowContent)
 };
 
 #endif /* MainWindowContent_hpp */
