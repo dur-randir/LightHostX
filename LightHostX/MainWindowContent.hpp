@@ -25,13 +25,11 @@ public:
 
     std::function<void()> onManagePlugins;
 
-    std::unique_ptr<XmlElement> getState() const;
     void loadState(const XmlElement& xml);
 
 private:
     AudioDeviceManagerSP             deviceManager;
     std::unique_ptr<NodeGraphCanvas> graphCanvas;
-    std::atomic<int> posted;
 
     void showDialog(NodeType type);
 };

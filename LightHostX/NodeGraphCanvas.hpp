@@ -137,8 +137,6 @@ public:
     const std::vector<PluginNode>& getNodes() const noexcept { return nodes; }
 
     std::function<void()> onManagePlugins;
-    std::function<void(int, NodeType)> onEditNode;
-    std::function<void()> onGraphChanged;
 
     std::unique_ptr<XmlElement> getState() const;
     void loadState(const XmlElement& xml);
@@ -162,6 +160,7 @@ private:
 
     std::vector<PluginNode> nodes;
     std::vector<NodeWire>   wires;
+    std::atomic<int> posted;
 
     int nextId                      { 1 };
     // Selection state
@@ -207,6 +206,8 @@ private:
     void openPluginEditor(int nodeId);
     void removeNode(int nodeId);
     void toggleBypass(int nodeId);
+    void showDeviceDialog(NodeType type);
+    void onGraphChanged();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(NodeGraphCanvas)
 };

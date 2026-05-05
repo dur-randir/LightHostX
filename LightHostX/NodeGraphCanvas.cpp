@@ -7,6 +7,8 @@
 
 #include "NodeGraphCanvas.hpp"
 #include "PluginWindow.hpp"
+#include "DeviceSelectorWindow.hpp"
+#include "AppProperties.hpp"
 
 // Global map to hold plugin listeners and keep them alive
 static std::map<uint32, std::unique_ptr<PluginParameterListener>> g_pluginListeners;
@@ -19,7 +21,7 @@ NodeGraphCanvas::NodeGraphCanvas(AudioDeviceManagerSP dm,
                                  KnownPluginList& kpl,
                                  AudioPluginFormatManager& fmt,
                                  AudioProcessorGraphSP g)
-    : deviceManager(dm), knownPlugins(kpl), formatManager(fmt), graph(g)
+    : deviceManager(dm), knownPlugins(kpl), formatManager(fmt), graph(g), posted(0)
 {
     setOpaque(true);
     setWantsKeyboardFocus(true);  // Enable keyboard focus for Delete key handling
@@ -117,7 +119,7 @@ void NodeGraphCanvas::addNode(const String& name, NodeType type)
     // Plugin nodes are added via showPluginPicker, which sets graphNodeId itself.
 
     nodes.push_back(n);
-    if (onGraphChanged) onGraphChanged();
+    onGraphChanged();
     repaint();
 }
 
@@ -210,7 +212,7 @@ void NodeGraphCanvas::disconnectNode(int nodeId)
     }
     
     graph->rebuild();
-    if (onGraphChanged) onGraphChanged();
+    onGraphChanged();
     repaint();
 }
 
@@ -479,7 +481,7 @@ void NodeGraphCanvas::mouseDoubleClick(const MouseEvent& e)
         if (nd.type == NodeType::Plugin) {
             openPluginEditor(nd.id);
         } else {
-            if (onEditNode) onEditNode(nd.id, nd.type);
+            showDeviceDialog(nd.type);
         }
     }
 }
@@ -596,7 +598,7 @@ void NodeGraphCanvas::mouseDrag(const MouseEvent& e)
             if (nd.pos != newPos)
             {
                 nd.pos = newPos;
-                if (onGraphChanged) onGraphChanged();
+                onGraphChanged();
                 repaint();
             }
             break;
@@ -626,7 +628,7 @@ void NodeGraphCanvas::mouseUp(const MouseEvent& e)
                     clearGraphInputConnections(*toNode);   // remove old wires (visual+audio)
                     addGraphConnection(*frNode, *toNode);  // add new audio connection
                     wires.push_back({ wireFrom, target }); // add visual wire
-                    if (onGraphChanged) onGraphChanged();
+                    onGraphChanged();
                 }
             }
         }
@@ -646,7 +648,7 @@ void NodeGraphCanvas::mouseUp(const MouseEvent& e)
                     clearGraphInputConnections(*toNode);
                     addGraphConnection(*frNode, *toNode);
                     wires.push_back({ target, wireFrom });
-                    if (onGraphChanged) onGraphChanged();
+                    onGraphChanged();
                 }
             }
         }
@@ -708,7 +710,7 @@ void NodeGraphCanvas::showPluginPicker(Point<int> canvasPos)
             if (auto* proc = nodePtr->getProcessor())
             {
                 auto listener = std::make_unique<PluginParameterListener>(
-                    [this] { if (onGraphChanged) onGraphChanged(); }
+                    [this] { onGraphChanged(); }
                 );
                 proc->addListener(listener.get());
                 // Store the listener in global map to keep it alive
@@ -727,7 +729,7 @@ void NodeGraphCanvas::showPluginPicker(Point<int> canvasPos)
             n.pos = { cx, 60 + cnt * (PluginNode::getHeight() + 20) };
 
             nodes.push_back(n);
-            if (onGraphChanged) onGraphChanged();
+            onGraphChanged();
             repaint();
         });
 }
@@ -794,12 +796,26 @@ void NodeGraphCanvas::removeNode(int nodeId)
             
             selectedNode = -1;
             graph->rebuild();  // Rebuild graph after removing node
-            if (onGraphChanged) onGraphChanged();
+            onGraphChanged();
             repaint();
             return;
         }
     }
 }
+
+void NodeGraphCanvas::showDeviceDialog(NodeType type) {
+    auto* wnd = new DeviceSelectorWindow(
+        type == NodeType::Input ? "Audio Input" : "Audio Output",
+        deviceManager,
+        type == NodeType::Input ? 256 : 0,
+        type == NodeType::Output ? 256 : 0,
+        [this]() {
+            updateInOutNames();
+        });
+    wnd->setVisible(true);
+    wnd->setAlwaysOnTop(true);
+}
+
 
 // ============================================================
 // Keyboard events
@@ -947,7 +963,7 @@ void NodeGraphCanvas::loadState(const XmlElement& xml)
                     if (auto* proc = nodePtr->getProcessor())
                     {
                         auto listener = std::make_unique<PluginParameterListener>(
-                            [this] { if (onGraphChanged) onGraphChanged(); });
+                            [this] { onGraphChanged(); });
                         proc->addListener(listener.get());
                         // Store the listener in global map to keep it alive
                         g_pluginListeners[nodePtr->nodeID.uid] = std::move(listener);
@@ -1008,5 +1024,18 @@ void NodeGraphCanvas::updateInOutNames() {
         }
     }
 
-    if (onGraphChanged) onGraphChanged();
+    onGraphChanged();
+}
+
+void NodeGraphCanvas::onGraphChanged() {
+    if (posted) return;
+    posted++;
+    
+    MessageManager::callAsync([this] {
+        if (auto xml = getState()) {
+            AppProperties::get()->setValue("nodeGraphState", xml.get());
+            AppProperties::saveIfNeeded();
+        }
+        posted = 0;
+    });
 }
