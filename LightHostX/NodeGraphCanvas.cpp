@@ -418,7 +418,7 @@ void NodeGraphCanvas::paint(Graphics& g)
     {
         g.setColour(Colour(0xFF999999));
         g.setFont(Font(FontOptions{}.withHeight(11.f)));
-        g.drawText("Double-click to add a plugin",
+        g.drawText("Right-click to add a plugin",
             Rectangle<int>(getZoneWidth(), 0, getWidth()-2*getZoneWidth(), getHeight()), Justification::centred, false
         );
     }
