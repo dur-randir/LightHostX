@@ -64,8 +64,6 @@
 - (void)applicationWillTerminate:(NSNotification *)aNotification {
     PluginWindow::closeAllCurrentlyOpenWindows();
 
-    [self savePluginStates];
-
     // clear window before tearing down device manager & graph
     mainWindow = nullptr;
     mainContent = nullptr;
@@ -123,25 +121,6 @@
 
     [appMenu addItemWithTitle: @"Delete Plugin States" action:@selector(terminate:) keyEquivalent:@"d"];
     [appMenu addItemWithTitle: @"Quit" action:@selector(terminate:) keyEquivalent:@"q"];
-}
-
-- (void)savePluginStates {
-    // The graph now saves via nodeGraphState XML which includes plugin state info
-    // This method iterates actual graph nodes and creates a plugin state backup
-    // in case the node graph XML gets corrupted
-    
-    for (const auto* node : graph->getNodes())
-    {
-        if (node == nullptr || node->getProcessor() == nullptr)
-            continue;
-            
-        auto* proc = node->getProcessor();
-        bool isInputOrOutput = (dynamic_cast<IOProcessor*>(proc) != nullptr);
-        if (isInputOrOutput)
-            continue;  // Skip input/output nodes
-    }
-    
-    AppProperties::saveIfNeeded();
 }
 
 @end
