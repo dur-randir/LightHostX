@@ -37,6 +37,9 @@ NodeGraphCanvas::NodeGraphCanvas(AudioDeviceManagerSP dm,
     outputNode->getProcessor()->setPlayConfigDetails(2, 2, sr, bs);
     outputNode->getProcessor()->prepareToPlay(sr, bs);
 
+    auto deviceSetup = deviceManager->getAudioDeviceSetup();
+    addNode(deviceSetup.inputDeviceName, NodeType::Input);
+    addNode(deviceSetup.outputDeviceName, NodeType::Output);
 }
 
 // ============================================================
@@ -496,34 +499,14 @@ void NodeGraphCanvas::mouseDown(const MouseEvent& e)
         if (nd.id)
         {
             // Right-click on a node
-                if (nd.type == NodeType::Input)
+                if (nd.type == NodeType::Input || nd.type == NodeType::Output)
                 {
                     // Input node: New Input, Disconnect, Delete
                     PopupMenu m;
-                    m.addItem(1, "Add Input Device");
-                    m.addItem(2, "Disconnect All Wires");
-                    m.addSeparator();
-                    m.addItem(3, "Delete");
+                    m.addItem(1, "Disconnect All Wires");
                     m.showMenuAsync(PopupMenu::Options().withTargetScreenArea({screenPos.x, screenPos.y, 1, 1}),
                         [this, hitNode](int result) {
-                            if (result == 1) onDoubleClickLeft();
-                            else if (result == 2) disconnectNode(hitNode);
-                            else if (result == 3) removeNode(hitNode);
-                        });
-                }
-                else if (nd.type == NodeType::Output)
-                {
-                    // Output node: New Output, Disconnect, Delete
-                    PopupMenu m;
-                    m.addItem(1, "Add Output Device");
-                    m.addItem(2, "Disconnect All Wires");
-                    m.addSeparator();
-                    m.addItem(3, "Delete");
-                    m.showMenuAsync(PopupMenu::Options().withTargetScreenArea({screenPos.x, screenPos.y, 1, 1}),
-                        [this, hitNode](int result) {
-                            if (result == 1) onDoubleClickRight();
-                            else if (result == 2) disconnectNode(hitNode);
-                            else if (result == 3) removeNode(hitNode);
+                            if (result == 1) disconnectNode(hitNode);
                         });
                 }
                 else if (nd.type == NodeType::Plugin)
@@ -548,21 +531,7 @@ void NodeGraphCanvas::mouseDown(const MouseEvent& e)
             // Right-click on empty area
             const Zone zone = zoneAt(e.getPosition());
 
-            if (zone == Zone::Left)
-            {
-                PopupMenu m;
-                m.addItem(1, "Add Input Device");
-                m.showMenuAsync(PopupMenu::Options().withTargetScreenArea({screenPos.x, screenPos.y, 1, 1}),
-                    [this](int result) { if (result == 1) onDoubleClickLeft(); });
-            }
-            else if (zone == Zone::Right)
-            {
-                PopupMenu m;
-                m.addItem(1, "Add Output Device");
-                m.showMenuAsync(PopupMenu::Options().withTargetScreenArea({screenPos.x, screenPos.y, 1, 1}),
-                    [this](int result) { if (result == 1) onDoubleClickRight(); });
-            }
-            else if (zone == Zone::Center)
+            if (zone == Zone::Center)
             {
                 // 右鍵在中間區域顯示外掛程式選單
                 showPluginPicker(e.getPosition());
@@ -850,7 +819,7 @@ bool NodeGraphCanvas::keyPressed(const KeyPress& key)
 // State management
 // ============================================================
 
-std::unique_ptr<XmlElement> NodeGraphCanvas::saveState() const
+std::unique_ptr<XmlElement> NodeGraphCanvas::getState() const
 {
     auto xml = std::make_unique<XmlElement>("NodeGraph");
     auto* xNodes = new XmlElement("Nodes");
@@ -907,7 +876,7 @@ void NodeGraphCanvas::loadState(const XmlElement& xml)
     // IMPORTANT: Do NOT call graph.clear() here!
     // The INPUT/OUTPUT nodes (UIDs 1000000-1000001) must remain in the graph
     // IconMenu's loadActivePlugins() already created them and we depend on them
-    
+
     nodes.clear();
     wires.clear();
 
@@ -1026,4 +995,18 @@ void NodeGraphCanvas::loadState(const XmlElement& xml)
 
     graph->rebuild();
     repaint();
+}
+
+void NodeGraphCanvas::updateInOutNames() {
+    auto deviceSetup = deviceManager->getAudioDeviceSetup();
+
+    for (auto& nd : nodes) {
+        if (nd.type == NodeType::Input) {
+            nd.name = deviceSetup.inputDeviceName;
+        } else if (nd.type == NodeType::Output) {
+            nd.name = deviceSetup.outputDeviceName;
+        }
+    }
+
+    if (onGraphChanged) onGraphChanged();
 }

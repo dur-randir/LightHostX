@@ -13,7 +13,7 @@
 //==============================================================================
 
 /// 建構函數：創建視窗並初始化對話框組件
-DeviceSelectorWindow::DeviceSelectorWindow(const String &title, AudioDeviceManagerSP dm, int maxIn, int maxOut, std::function<void(const String &)> cb)
+DeviceSelectorWindow::DeviceSelectorWindow(const String &title, AudioDeviceManagerSP dm, int maxIn, int maxOut, std::function<void()> cb)
     : DocumentWindow(title, Colours::lightgrey,
         DocumentWindow::closeButton | DocumentWindow::minimiseButton, true),
         onConfirmCallback(std::move(cb)
@@ -36,12 +36,12 @@ DeviceSelectorWindow::DeviceSelectorWindow(const String &title, AudioDeviceManag
 /// 關閉視窗並執行清理
 void DeviceSelectorWindow::closeWindow()
 {
+    
     // 當用戶點擊窗口的X按鈕時，獲取當前選擇的設備並調用回調
     if (auto *dlg = dynamic_cast<DeviceSelectorDialog *>(getContentComponent()))
     {
-        String name = dlg->getCurrentDeviceName();
         if (onConfirmCallback)
-            onConfirmCallback(name);
+            onConfirmCallback();
     }
 
     removeFromDesktop();

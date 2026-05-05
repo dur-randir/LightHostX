@@ -31,7 +31,7 @@ public:
     /// @param cb         使用者選擇裝置後調用的回調函式
     DeviceSelectorWindow(const String &title, AudioDeviceManagerSP dm,
                          int maxIn, int maxOut,
-                         std::function<void(const String &)> cb);
+                         std::function<void()> cb);
 
     /// 解構函式
     ~DeviceSelectorWindow() override {}
@@ -47,7 +47,7 @@ public:
 
 private:
     /// 使用者選擇裝置時調用的回調函式
-    std::function<void(const String &)> onConfirmCallback;
+    std::function<void()> onConfirmCallback;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DeviceSelectorWindow)
 };

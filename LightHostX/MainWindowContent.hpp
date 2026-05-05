@@ -25,7 +25,7 @@ public:
 
     std::function<void()> onManagePlugins;
 
-    std::unique_ptr<XmlElement> saveState() const;
+    std::unique_ptr<XmlElement> getState() const;
     void loadState(const XmlElement& xml);
 
 private:
@@ -33,7 +33,7 @@ private:
     std::unique_ptr<NodeGraphCanvas> graphCanvas;
     std::atomic<int> posted;
 
-    void showDialog(bool create, NodeType type);
+    void showDialog(NodeType type);
 };
 
 #endif /* MainWindowContent_hpp */

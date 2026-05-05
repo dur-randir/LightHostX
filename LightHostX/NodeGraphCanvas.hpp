@@ -137,13 +137,12 @@ public:
     const std::vector<PluginNode>& getNodes() const noexcept { return nodes; }
 
     std::function<void()> onManagePlugins;
-    std::function<void()> onDoubleClickLeft;
-    std::function<void()> onDoubleClickRight;
     std::function<void(int, NodeType)> onEditNode;
     std::function<void()> onGraphChanged;
 
-    std::unique_ptr<XmlElement> saveState() const;
+    std::unique_ptr<XmlElement> getState() const;
     void loadState(const XmlElement& xml);
+    void updateInOutNames();
 
     void paint(Graphics& g) override;
     void mouseDoubleClick(const MouseEvent& e) override;

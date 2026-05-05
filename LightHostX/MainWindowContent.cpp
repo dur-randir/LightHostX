@@ -17,12 +17,6 @@ MainWindowContent::MainWindowContent(AudioDeviceManagerSP      dm,
 {
     graphCanvas = std::make_unique<NodeGraphCanvas>(dm, kpl, fmt, g);
 
-    graphCanvas->onDoubleClickLeft  = [this] {
-        showDialog(true, NodeType::Input);
-    };
-    graphCanvas->onDoubleClickRight = [this] {
-        showDialog(true, NodeType::Output);
-    };
     graphCanvas->onManagePlugins    = [this] {
         if (onManagePlugins) onManagePlugins();
     };
@@ -31,7 +25,7 @@ MainWindowContent::MainWindowContent(AudioDeviceManagerSP      dm,
         posted++;
 
         MessageManager::callAsync([this] {
-            if (auto xml = this->saveState()) {
+            if (auto xml = this->getState()) {
                 AppProperties::get()->setValue("nodeGraphState", xml.get());
                 AppProperties::saveIfNeeded();
             }
@@ -39,23 +33,20 @@ MainWindowContent::MainWindowContent(AudioDeviceManagerSP      dm,
         });
     };
     graphCanvas->onEditNode         = [this] (int /*nodeId*/, NodeType type) {
-        showDialog(false, type);
+        showDialog(type);
     };
 
     addAndMakeVisible(*graphCanvas);
 }
 
-void MainWindowContent::showDialog(bool create, NodeType type) {
+void MainWindowContent::showDialog(NodeType type) {
     auto* wnd = new DeviceSelectorWindow(
         type == NodeType::Input ? "Audio Input" : "Audio Output",
         deviceManager,
         type == NodeType::Input ? 256 : 0,
         type == NodeType::Output ? 256 : 0,
-        [this,create,type](const String& name) {
-            if (create) {
-                graphCanvas->addNode(name, type);
-            }
-            saveState();
+        [this]() {
+            graphCanvas->updateInOutNames();
         });
     wnd->setVisible(true);
     wnd->setAlwaysOnTop(true);
@@ -70,8 +61,8 @@ void MainWindowContent::resized() {
     graphCanvas->setBounds(bounds);
 }
 
-std::unique_ptr<XmlElement> MainWindowContent::saveState() const {
-    return graphCanvas->saveState();
+std::unique_ptr<XmlElement> MainWindowContent::getState() const {
+    return graphCanvas->getState();
 }
 
 void MainWindowContent::loadState(const XmlElement& xml) {
