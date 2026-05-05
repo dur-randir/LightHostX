@@ -95,8 +95,9 @@
     }
 
     mainWindow->setVisible(true);
-    mainWindow->setAlwaysOnTop(true);
+    mainWindow->addToDesktop();
     mainWindow->toFront(true);
+    mainWindow->setAlwaysOnTop(true); // really brings to front dockless window
     mainWindow->setAlwaysOnTop(false);
 }
 
@@ -106,8 +107,9 @@
     }
 
     pluginListWindow->setVisible(true);
-    pluginListWindow->setAlwaysOnTop(true);
+    pluginListWindow->addToDesktop();
     pluginListWindow->toFront(true);
+    pluginListWindow->setAlwaysOnTop(true);  // really brings to front dockless window
     pluginListWindow->setAlwaysOnTop(false);
 }
 

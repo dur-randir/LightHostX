@@ -206,7 +206,7 @@ private:
     void openPluginEditor(int nodeId);
     void removeNode(int nodeId);
     void toggleBypass(int nodeId);
-    void showDeviceDialog(NodeType type);
+    void showDeviceDialog(NodeType type, juce::Point<int> pos);
     void onGraphChanged();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(NodeGraphCanvas)

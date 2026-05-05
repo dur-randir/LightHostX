@@ -51,6 +51,7 @@ void PluginListWindow::changeListenerCallback(ChangeBroadcaster* changed)
         });
     }
 }
+
 bool PluginListWindow::keyPressed(const KeyPress& key)
 {
     if (key.getKeyCode() == KeyPress::escapeKey) {

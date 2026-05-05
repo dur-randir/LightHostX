@@ -30,7 +30,7 @@ public:
     /// @param maxOut     最大輸出聲道數
     /// @param cb         使用者選擇裝置後調用的回調函式
     DeviceSelectorWindow(const String &title, AudioDeviceManagerSP dm,
-                         int maxIn, int maxOut,
+                         int maxIn, int maxOut, Point<int> pos,
                          std::function<void()> cb);
 
     /// 解構函式
@@ -41,6 +41,7 @@ public:
 
     /// DocumentWindow 虛函數：當用戶點擊視窗關閉按鈕時調用
     void closeButtonPressed() override;
+    bool keyPressed (const KeyPress &key) override;
 
     /// 根據當前縮放因子更新視窗大小
     void updateWindowSize();

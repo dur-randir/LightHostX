@@ -32,7 +32,7 @@ public:
 
     /// 解構函式
     ~DeviceSelectorDialog() override;
-
+    
     /// 重新建立 AudioDeviceSelectorComponent 實例並應用縮放
     void updateSelectorComponent();
 

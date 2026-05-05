@@ -13,7 +13,7 @@
 //==============================================================================
 
 /// 建構函數：創建視窗並初始化對話框組件
-DeviceSelectorWindow::DeviceSelectorWindow(const String &title, AudioDeviceManagerSP dm, int maxIn, int maxOut, std::function<void()> cb)
+DeviceSelectorWindow::DeviceSelectorWindow(const String &title, AudioDeviceManagerSP dm, int maxIn, int maxOut, Point<int> pos, std::function<void()> cb)
     : DocumentWindow(title, Colours::lightgrey,
         DocumentWindow::closeButton | DocumentWindow::minimiseButton, true),
         onConfirmCallback(std::move(cb)
@@ -30,7 +30,8 @@ DeviceSelectorWindow::DeviceSelectorWindow(const String &title, AudioDeviceManag
 
     // 初始化視窗大小
     updateWindowSize();
-    setTopLeftPosition(250, 150); // 預設視窗左上角座標
+    setTopLeftPosition(pos.x - getWidth() / 2, pos.y - getHeight() / 3);
+    //setTopLeftPosition(250, 150); // 預設視窗左上角座標
 }
 
 /// 關閉視窗並執行清理
@@ -62,4 +63,13 @@ void DeviceSelectorWindow::updateWindowSize()
         dlg->getPreferredSize(w, h);
         setSize(w, h);
     }
+}
+
+bool DeviceSelectorWindow::keyPressed(const KeyPress& key)
+{
+    if (key.getKeyCode() == KeyPress::escapeKey) {
+        closeButtonPressed();
+        return true;
+    }
+    return false;
 }

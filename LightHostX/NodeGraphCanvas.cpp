@@ -481,7 +481,7 @@ void NodeGraphCanvas::mouseDoubleClick(const MouseEvent& e)
         if (nd.type == NodeType::Plugin) {
             openPluginEditor(nd.id);
         } else {
-            showDeviceDialog(nd.type);
+            showDeviceDialog(nd.type, localPointToGlobal(e.getPosition()));
         }
     }
 }
@@ -803,16 +803,18 @@ void NodeGraphCanvas::removeNode(int nodeId)
     }
 }
 
-void NodeGraphCanvas::showDeviceDialog(NodeType type) {
+void NodeGraphCanvas::showDeviceDialog(NodeType type, Point<int> pos) {
     auto* wnd = new DeviceSelectorWindow(
         type == NodeType::Input ? "Audio Input" : "Audio Output",
         deviceManager,
         type == NodeType::Input ? 256 : 0,
         type == NodeType::Output ? 256 : 0,
+        pos,
         [this]() {
             updateInOutNames();
         });
     wnd->setVisible(true);
+    wnd->enterModalState();
     wnd->setAlwaysOnTop(true);
 }
 
@@ -1025,6 +1027,7 @@ void NodeGraphCanvas::updateInOutNames() {
     }
 
     onGraphChanged();
+    repaint();
 }
 
 void NodeGraphCanvas::onGraphChanged() {
