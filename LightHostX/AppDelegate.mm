@@ -94,11 +94,10 @@
         mainWindow = std::make_unique<MainWindow>(mainContent.get());
     }
 
-    mainWindow->setVisible(true);
+    Process::makeForegroundProcess();
     mainWindow->addToDesktop();
+    mainWindow->setVisible(true);
     mainWindow->toFront(true);
-    mainWindow->setAlwaysOnTop(true); // really brings to front dockless window
-    mainWindow->setAlwaysOnTop(false);
 }
 
 - (void)showEditPlugins {
@@ -106,11 +105,10 @@
         pluginListWindow = std::make_unique<PluginListWindow>(*knownPluginList, *formatManager);
     }
 
-    pluginListWindow->setVisible(true);
+    Process::makeForegroundProcess();
     pluginListWindow->addToDesktop();
+    pluginListWindow->setVisible(true);
     pluginListWindow->toFront(true);
-    pluginListWindow->setAlwaysOnTop(true);  // really brings to front dockless window
-    pluginListWindow->setAlwaysOnTop(false);
 }
 
 - (void)fillMenu {
