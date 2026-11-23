@@ -98,6 +98,9 @@ PluginWindow::PluginWindow (Component* const pluginEditor,
                         owner->properties.getWithDefault (getLastYProp (type), Random::getSystemRandom().nextInt (500)));
 
     owner->properties.set (getOpenProp (type), true);
+
+    // Must float like the graph editor (MainWindow), otherwise it opens behind it.
+    setAlwaysOnTop (true);
     setVisible (true);
 
     activePluginWindows.add(this);

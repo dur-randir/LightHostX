@@ -24,6 +24,12 @@ MainWindow::MainWindow(MainWindowContent* content)
     setResizeLimits(600, 400, 4096, 4096);
     centreWithSize(900, 560);
     setTopLeftPosition(250, 150); // 預設視窗左上角座標
+
+    // We're an LSUIElement app (no Dock icon / Cmd-Tab entry), so a normal-level
+    // window gets buried under other apps' windows on deactivation with no way back.
+    // Float it (NSFloatingWindowLevel) so it stays visible when focus moves elsewhere.
+    // Any window opened from the editor must be always-on-top too, or it'll open behind.
+    setAlwaysOnTop(true);
 }
 
 void MainWindow::closeButtonPressed() {

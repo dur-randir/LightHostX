@@ -26,6 +26,9 @@ PluginListWindow::PluginListWindow(KnownPluginList& list, AudioPluginFormatManag
     setTopLeftPosition(60, 60);
 
     restoreWindowStateFromString(AppProperties::get()->getValue("listWindowPos"));
+
+    // Must float like the graph editor (MainWindow), otherwise it opens behind it.
+    setAlwaysOnTop(true);
 }
 
 PluginListWindow::~PluginListWindow() {

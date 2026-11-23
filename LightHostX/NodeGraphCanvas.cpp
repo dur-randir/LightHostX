@@ -813,9 +813,9 @@ void NodeGraphCanvas::showDeviceDialog(NodeType type, Point<int> pos) {
         [this]() {
             updateInOutNames();
         });
+    wnd->setAlwaysOnTop(true); // before showing, so it never appears behind the floating editor
     wnd->setVisible(true);
     wnd->enterModalState();
-    wnd->setAlwaysOnTop(true);
 }
 
 
