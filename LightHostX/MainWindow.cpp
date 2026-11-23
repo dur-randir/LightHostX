@@ -30,6 +30,22 @@ void MainWindow::closeButtonPressed() {
     this->setVisible(false);
 }
 
+void MainWindow::visibilityChanged() {
+    DocumentWindow::visibilityChanged();
+
+    if (onVisibilityChanged) {
+        onVisibilityChanged(isVisible() && !isMinimised());
+    }
+}
+
+void MainWindow::minimisationStateChanged(bool isNowMinimised) {
+    DocumentWindow::minimisationStateChanged(isNowMinimised);
+
+    if (onVisibilityChanged) {
+        onVisibilityChanged(isVisible() && !isNowMinimised);
+    }
+}
+
 bool MainWindow::keyPressed(const KeyPress& key)
 {
     if (key.getKeyCode() == KeyPress::escapeKey) {

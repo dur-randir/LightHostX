@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		2A50C10A2FA7254D00D26E9C /* PluginListWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2A50C1092FA7254D00D26E9C /* PluginListWindow.cpp */; };
 		2A50C10D2FA7288300D26E9C /* MainWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2A50C10C2FA7288300D26E9C /* MainWindow.cpp */; };
+		2A50C1222FA8000000D26E9C /* ConsumerMonitor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2A50C1212FA8000000D26E9C /* ConsumerMonitor.cpp */; };
+		2A50C1252FA8000000D26E9C /* AudioPowerManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2A50C1242FA8000000D26E9C /* AudioPowerManager.cpp */; };
 		2A50C1132FA738FD00D26E9C /* NodeGraphCanvas.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2A50C1122FA738FD00D26E9C /* NodeGraphCanvas.cpp */; };
 		2A50C1162FA7390F00D26E9C /* MainWindowContent.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2A50C1152FA7390F00D26E9C /* MainWindowContent.cpp */; };
 		2A50C1192FA7617400D26E9C /* DeviceSelectorWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2A50C1182FA7617400D26E9C /* DeviceSelectorWindow.cpp */; };
@@ -55,6 +57,10 @@
 		2A50C1092FA7254D00D26E9C /* PluginListWindow.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = PluginListWindow.cpp; sourceTree = "<group>"; };
 		2A50C10B2FA7288300D26E9C /* MainWindow.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = MainWindow.hpp; sourceTree = "<group>"; };
 		2A50C10C2FA7288300D26E9C /* MainWindow.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MainWindow.cpp; sourceTree = "<group>"; };
+		2A50C1202FA8000000D26E9C /* ConsumerMonitor.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = ConsumerMonitor.hpp; sourceTree = "<group>"; };
+		2A50C1212FA8000000D26E9C /* ConsumerMonitor.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ConsumerMonitor.cpp; sourceTree = "<group>"; };
+		2A50C1232FA8000000D26E9C /* AudioPowerManager.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = AudioPowerManager.hpp; sourceTree = "<group>"; };
+		2A50C1242FA8000000D26E9C /* AudioPowerManager.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AudioPowerManager.cpp; sourceTree = "<group>"; };
 		2A50C10E2FA7336F00D26E9C /* AppProperties.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = AppProperties.hpp; sourceTree = "<group>"; };
 		2A50C1112FA738FD00D26E9C /* NodeGraphCanvas.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = NodeGraphCanvas.hpp; sourceTree = "<group>"; };
 		2A50C1122FA738FD00D26E9C /* NodeGraphCanvas.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = NodeGraphCanvas.cpp; sourceTree = "<group>"; };
@@ -2498,6 +2504,10 @@
 				2A50C10C2FA7288300D26E9C /* MainWindow.cpp */,
 				2A50C1142FA7390F00D26E9C /* MainWindowContent.hpp */,
 				2A50C1152FA7390F00D26E9C /* MainWindowContent.cpp */,
+				2A50C1202FA8000000D26E9C /* ConsumerMonitor.hpp */,
+				2A50C1212FA8000000D26E9C /* ConsumerMonitor.cpp */,
+				2A50C1232FA8000000D26E9C /* AudioPowerManager.hpp */,
+				2A50C1242FA8000000D26E9C /* AudioPowerManager.cpp */,
 				2A5E56662C6C8F28006E727C /* PluginWindow.hpp */,
 				2A5E56652C6C8F28006E727C /* PluginWindow.cpp */,
 				2A50C1082FA7254D00D26E9C /* PluginListWindow.hpp */,
@@ -7092,6 +7102,8 @@
 				2A50C11C2FA761D600D26E9C /* DeviceSelectorDialog.cpp in Sources */,
 				2A50C1162FA7390F00D26E9C /* MainWindowContent.cpp in Sources */,
 				2A5E43062C6806B7006E727C /* AppDelegate.mm in Sources */,
+				2A50C1222FA8000000D26E9C /* ConsumerMonitor.cpp in Sources */,
+				2A50C1252FA8000000D26E9C /* AudioPowerManager.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -7174,7 +7186,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 11.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -7230,7 +7242,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 11.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
@@ -7269,7 +7281,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 11.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.randir.LightHostX;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -7314,7 +7326,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 11.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.randir.LightHostX;
 				PRODUCT_NAME = "$(TARGET_NAME)";

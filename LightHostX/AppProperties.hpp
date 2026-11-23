@@ -23,6 +23,7 @@ public:
             PropertiesFile::Options options;
             options.applicationName     = "LightHostX";
             options.filenameSuffix      = "settings";
+            options.osxLibrarySubFolder = "Application Support/LightHostX";
 
             appProperties = std::make_unique<ApplicationProperties>();
             appProperties->setStorageParameters(options);

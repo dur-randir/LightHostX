@@ -12,6 +12,7 @@
 #import "MainWindow.hpp"
 #import "MainWindowContent.hpp"
 #import "PluginListWindow.hpp"
+#import "AudioPowerManager.hpp"
 
 @interface AppDelegate : NSObject<NSApplicationDelegate>
 {
@@ -28,5 +29,7 @@
     std::unique_ptr<MainWindow> mainWindow;
     std::unique_ptr<MainWindowContent> mainContent;
     std::unique_ptr<PluginListWindow> pluginListWindow;
+
+    std::unique_ptr<AudioPowerManager> powerManager;
 }
 @end

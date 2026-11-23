@@ -18,6 +18,11 @@ public:
     MainWindow(MainWindowContent* content);
     void closeButtonPressed() override;
     bool keyPressed(const KeyPress& key) override;
+    void visibilityChanged() override;
+    void minimisationStateChanged(bool isNowMinimised) override;
+
+    // Fired with true when the window is shown and not minimised.
+    std::function<void(bool)> onVisibilityChanged;
 
 private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainWindow)
