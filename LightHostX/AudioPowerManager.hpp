@@ -19,8 +19,8 @@
 class AudioPowerManager : private ChangeListener, private Timer
 {
 public:
-    static constexpr int kGracePeriodMs = 60 * 1000;
-    static constexpr int kWakeRetryMs   = 5 * 1000;
+    static constexpr int kGracePeriodMs = 5 * 1000;
+    static constexpr int kWakeRetryMs   = 1 * 1000;
 
     // numInputs/numOutputs must match what deviceManager.initialise() was called with.
     AudioPowerManager(AudioDeviceManager& deviceManager, int numInputs, int numOutputs);
