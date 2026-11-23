@@ -64,10 +64,28 @@ static constexpr int kNumChannels = 2;
     // Stops the audio device when nothing consumes our output
     powerManager = std::make_unique<AudioPowerManager>(*deviceManager, kNumChannels, kNumChannels);
 
+    NSNotificationCenter* wsnc = NSWorkspace.sharedWorkspace.notificationCenter;
+    [wsnc addObserver:self selector:@selector(systemWillSleep:) name:NSWorkspaceWillSleepNotification object:nil];
+    [wsnc addObserver:self selector:@selector(systemDidWake:) name:NSWorkspaceDidWakeNotification object:nil];
+
     [self fillMenu];
 }
 
+- (void)systemWillSleep:(NSNotification *)notification {
+    if (powerManager) {
+        powerManager->systemWillSleep();
+    }
+}
+
+- (void)systemDidWake:(NSNotification *)notification {
+    if (powerManager) {
+        powerManager->systemDidWake();
+    }
+}
+
 - (void)applicationWillTerminate:(NSNotification *)aNotification {
+    [NSWorkspace.sharedWorkspace.notificationCenter removeObserver:self];
+
     PluginWindow::closeAllCurrentlyOpenWindows();
 
     // clear window before tearing down device manager & graph

@@ -31,6 +31,10 @@ public:
     bool getRunOnlyWhenNeeded() const { return runOnlyWhenNeeded; }
     void setRunOnlyWhenNeeded(bool enabled);
 
+    // Call on the message thread from NSWorkspace sleep/wake notifications.
+    void systemWillSleep();
+    void systemDidWake();
+
 private:
     AudioDeviceManager& deviceManager;
     const int numInputs, numOutputs;

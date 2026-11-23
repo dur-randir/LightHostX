@@ -113,6 +113,24 @@ void AudioPowerManager::timerCallback()
     }
 }
 
+void AudioPowerManager::systemWillSleep()
+{
+    // JUCE timers run on mach_absolute_time, which doesn't advance during system sleep:
+    // a pending grace period would resume after wake, restarting the device for the remainder.
+    // Nobody's listening anyway, so finish it now.
+    if (!sleeping && isTimerRunning() && !isNeeded()) {
+        os_log(logger(), "system sleeping, skipping idle grace period");
+        stopTimer();
+        sleep();
+    }
+}
+
+void AudioPowerManager::systemDidWake()
+{
+    // Consumers or devices may have changed while asleep.
+    update();
+}
+
 void AudioPowerManager::sleep()
 {
     sleptSetup = deviceManager.getAudioDeviceSetup();
