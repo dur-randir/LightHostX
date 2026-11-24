@@ -13,6 +13,7 @@
 #import "MainWindowContent.hpp"
 #import "PluginListWindow.hpp"
 #import "AudioPowerManager.hpp"
+#import "LightHostLookAndFeel.h"
 
 @interface AppDelegate : NSObject<NSApplicationDelegate>
 {
@@ -24,7 +25,7 @@
     std::unique_ptr<AudioProcessorPlayer> player;
     std::unique_ptr<AudioPluginFormatManager> formatManager;
     std::unique_ptr<KnownPluginList> knownPluginList;
-    std::unique_ptr<LookAndFeel_V3> lookAndFeel;
+    std::unique_ptr<lighthost::ui::LightHostLookAndFeel> lookAndFeel;
 
     std::unique_ptr<MainWindow> mainWindow;
     std::unique_ptr<MainWindowContent> mainContent;

@@ -10,32 +10,41 @@
 
 #include "JuceHeader.h"
 #include "DeviceSelectorDialog.hpp"
+#include "LightHostLookAndFeel.h"
 
 using AudioProcessorGraphSP = std::shared_ptr<AudioProcessorGraph>;
 using IOProcessor = AudioProcessorGraph::AudioGraphIOProcessor;
 
+/** Canvas palette — the LightHost warm-dark "tactile" look (see LightHostLookAndFeel.h). */
 namespace NP
 {
-    const Colour bg         { 0xFFE8E8E8 };
-    const Colour canvas     { 0xFFECECEC };
-    const Colour grid       { 0xFFD8D8D8 };
-    const Colour zoneBg     { 0xFFDFDFDF };
-    const Colour zoneBorder { 0xFFBBBBBB };
-    const Colour zoneHeader { 0xFFD0D0D0 };
-    const Colour zoneTitle  { 0xFF333333 };
-    const Colour rowBg      { 0xFFCCCCCC };
-    const Colour rowText    { 0xFF222222 };
-    const Colour nodePlugin { 0xFFDDDDDD };
-    const Colour nodeIn     { 0xFFB8CBE0 };
-    const Colour nodeOut    { 0xFFD8B8B8 };
-    const Colour nodeBorder { 0xFF999999 };
-    const Colour nodeText   { 0xFF111111 };
-    const Colour nodeHint   { 0xFF888888 };
-    const Colour portIn     { 0xFF2980B9 };
-    const Colour portOut    { 0xFFE67E22 };
-    const Colour wireCol    { 0xFF888888 };
-    const Colour wireActive { 0xFFE67E22 };
-    const Colour wireBad    { 0xFFCC2222 };
+    using LAF = lighthost::ui::LightHostLookAndFeel;
+
+    const Colour bg             = LAF::appBg();
+    const Colour zoneBg         { 0xFF0F0E0D };        // side rails, well below the canvas
+    const Colour zoneBorder     { 0xFF433D36 };
+    const Colour grid           { 0x12FFFFFF };        // faint dot grid
+    const Colour selection      = LAF::accent();
+    const Colour shadow         { 0x73000000 };
+    const Colour portIdle       { 0xFFB0A498 };
+    const Colour portRing       = LAF::nodeBottom();
+    const Colour wireCol        { 0xFF8A7E72 };
+    const Colour wireValid      { 0xFF5EC27A };
+
+    // Endpoint (in/out device) rows: lifted well above the rail.
+    const Colour endpointTop    { 0xFF46403A };
+    const Colour endpointBottom { 0xFF36312C };
+    const Colour endpointBorder { 0xFF625A50 };
+
+    // Active plugin card.
+    const Colour cardTop        { 0xFF3A3530 };
+    const Colour cardBorder     { 0xFF56504A };
+
+    // Bypassed plugin card: hollow + hatched + dashed.
+    const Colour bypassFill     { 0xFF1A1816 };
+    const Colour bypassHatch    { 0x0FFFFFFF };
+    const Colour bypassEdge     { 0xFF6E665D };
+    const Colour wireBad    { 0xFFD25B5B };
 }
 
 //==============================================================================

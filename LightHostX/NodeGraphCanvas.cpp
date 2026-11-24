@@ -25,7 +25,7 @@ NodeGraphCanvas::NodeGraphCanvas(AudioDeviceManagerSP dm,
 {
     setOpaque(true);
     setWantsKeyboardFocus(true);  // Enable keyboard focus for Delete key handling
-    
+
     // set up permanent nodes
     inputNode  = graph->addNode(std::make_unique<IOProcessor>(IOProcessor::audioInputNode),
                      AudioProcessorGraph::NodeID(NodeGraphCanvas::kInputNodeUID));
@@ -138,18 +138,18 @@ void NodeGraphCanvas::addGraphConnection(const PluginNode& from, const PluginNod
         DBG("WARNING: Target node " << String(to.graphNodeId.uid) << " not found in graph!");
         return;
     }
-    
+
     DBG("Adding connection from " << String(from.graphNodeId.uid) << " to " << String(to.graphNodeId.uid));
-    
+
     if (!graph->addConnection({ { from.graphNodeId, 0 }, { to.graphNodeId, 0 } })) {
         DBG("WARNING: Failed to add connection (channel 0)");
     }
-    
+
     int from_ch = (from.type == NodeType::Input) ? 0 : 1;
     if (!graph->addConnection({ { from.graphNodeId, from_ch }, { to.graphNodeId, 1 } })) {
         DBG("WARNING: Failed to add connection (channel 1)");
     }
-    
+
     graph->rebuild();  // Rebuild the graph topology to apply new connections
 }
 
@@ -185,18 +185,18 @@ void NodeGraphCanvas::disconnectNode(int nodeId)
 {
     // Disconnect all wires connected to this node (both input and output)
     std::vector<int> wiresToRemove;
-    
+
     for (size_t i = 0; i < wires.size(); ++i)
     {
         if (wires[i].fromNode == nodeId || wires[i].toNode == nodeId)
             wiresToRemove.push_back((int)i);
     }
-    
+
     // Remove wires in reverse order to maintain indices
     for (int idx = (int)wiresToRemove.size() - 1; idx >= 0; --idx)
     {
         const auto& w = wires[wiresToRemove[idx]];
-        
+
         // Find the from and to nodes and remove the graph connection
         const PluginNode *frNode = nullptr, *toNode = nullptr;
         for (const auto& nd : nodes)
@@ -204,13 +204,13 @@ void NodeGraphCanvas::disconnectNode(int nodeId)
             if (nd.id == w.fromNode) frNode = &nd;
             if (nd.id == w.toNode)   toNode = &nd;
         }
-        
+
         if (frNode && toNode)
             removeGraphConnection(*frNode, *toNode);
-        
+
         wires.erase(wires.begin() + wiresToRemove[idx]);
     }
-    
+
     graph->rebuild();
     onGraphChanged();
     repaint();
@@ -222,29 +222,43 @@ void NodeGraphCanvas::disconnectNode(int nodeId)
 
 void NodeGraphCanvas::drawZoneBackgrounds(Graphics& g) const
 {
-    const int w = getWidth(), h = getHeight();
+    using LAF = lighthost::ui::LightHostLookAndFeel;
+    const int w = getWidth(), h = getHeight(), zw = getZoneWidth(), hh = getHeaderHeight();
 
+    // Side rails: recessed, with a hairline separator towards the canvas.
     g.setColour(NP::zoneBg);
-    g.fillRect(0, 0, getZoneWidth(), h);
+    g.fillRect(0, 0, zw, h);
+    g.fillRect(w - zw, 0, zw, h);
     g.setColour(NP::zoneBorder);
-    g.drawLine((float)getZoneWidth() - 0.5f, 0, (float)getZoneWidth() - 0.5f, (float)h, 1);
+    g.fillRect(zw - 1, 0, 1, h);
+    g.fillRect(w - zw, 0, 1, h);
 
-    g.setColour(NP::zoneBg);
-    g.fillRect(w - getZoneWidth(), 0, getZoneWidth(), h);
-    g.setColour(NP::zoneBorder);
-    g.drawLine((float)(w - getZoneWidth()) + 0.5f, 0, (float)(w - getZoneWidth()) + 0.5f, (float)h, 1);
-
+    // Rail headers in the title-bar style: gradient, bottom border, accent diamond + mono caption.
     auto drawHeader = [&](int x, const String& title)
     {
-        const Rectangle<int> hdr(x, 0, getZoneWidth(), getHeaderHeight());
-        g.setColour(NP::zoneHeader);
+        const Rectangle<int> hdr(x, 0, zw, hh);
+        g.setGradientFill(ColourGradient(LAF::titleTop(), 0.f, 0.f, LAF::titleBottom(), 0.f, (float)hh, false));
         g.fillRect(hdr);
-        g.setColour(NP::zoneTitle);
-        g.setFont(Font(FontOptions{}.withHeight(13.5f).withStyle("Bold")));
-        g.drawText(title, hdr, Justification::centred, false);
+        g.setColour(LAF::titleBorder());
+        g.fillRect(hdr.withTop(hh - 1));
+
+        g.setFont(LAF::mono(10.5f));
+        const int textW = GlyphArrangement::getStringWidthInt(g.getCurrentFont(), title);
+        const float diamond = 7.f;
+        const float startX = (float)hdr.getCentreX() - (diamond + 8.f + (float)textW) * 0.5f;
+
+        Path d;
+        d.addRectangle(-diamond * 0.5f, -diamond * 0.5f, diamond, diamond);
+        g.setColour(LAF::accent());
+        g.fillPath(d, AffineTransform::rotation(MathConstants<float>::pi * 0.25f)
+                          .translated(startX + diamond * 0.5f, (float)hdr.getCentreY()));
+
+        g.setColour(LAF::textSecond());
+        g.drawText(title, Rectangle<int>((int)(startX + diamond + 8.f), 0, textW + 2, hh - 1),
+                   Justification::centredLeft, false);
     };
-    drawHeader(0, "INPUT PORTS");
-    drawHeader(w-getZoneWidth(), "OUTPUT PORTS");
+    drawHeader(0, "INPUT");
+    drawHeader(w - zw, "OUTPUT");
 
     bool hasIn = false, hasOut = false;
     for (const auto& nd : nodes)
@@ -252,160 +266,254 @@ void NodeGraphCanvas::drawZoneBackgrounds(Graphics& g) const
         if (nd.type == NodeType::Input)  hasIn  = true;
         if (nd.type == NodeType::Output) hasOut = true;
     }
-    g.setColour(Colour(0xFF999999));
-    g.setFont(Font(FontOptions{}.withHeight(11.f)));
+    g.setColour(LAF::textTert());
+    g.setFont(LAF::mono(9.5f));
     if (!hasIn) {
-        g.drawText("double-click to add", Rectangle<int>(0, getHeaderHeight(), getZoneWidth(), 22), Justification::centred, false
-        );
+        g.drawText("double-click to add", Rectangle<int>(0, hh + 4, zw, 22), Justification::centred, false);
     }
     if (!hasOut) {
-        g.drawText("double-click to add", Rectangle<int>(w-getZoneWidth(), getHeaderHeight(), getZoneWidth(), 22), Justification::centred, false
-        );
+        g.drawText("double-click to add", Rectangle<int>(w - zw, hh + 4, zw, 22), Justification::centred, false);
     }
+}
+
+static void drawPortDot(Graphics& g, Point<int> pt, bool hollow = false)
+{
+    const float pr = (float)PluginNode::getPortRadius();
+    const auto r = Rectangle<float>(pr * 2.f, pr * 2.f).withCentre(pt.toFloat());
+    g.setColour(NP::portRing);
+    g.fillEllipse(r);
+    if (hollow) {
+        g.setColour(NP::bypassEdge);
+        g.drawEllipse(r.reduced(2.5f), 1.5f);
+    } else {
+        g.setColour(NP::portIdle);
+        g.fillEllipse(r.reduced(2.5f));
+    }
+}
+
+static bool isNodeBypassed(const AudioProcessorGraph& graph, const PluginNode& n)
+{
+    if (n.type != NodeType::Plugin) return false;
+    if (auto* graphNode = graph.getNodeForId(n.graphNodeId)) {
+        return graphNode->isBypassed();
+    }
+    return false;
 }
 
 void NodeGraphCanvas::drawNode(Graphics& g, const PluginNode& n) const
 {
-    if (n.type == NodeType::Input || n.type == NodeType::Output)
-    {
-        // --- Side-panel style rows ---
-        const bool isInput = (n.type == NodeType::Input);
-        const auto b = nodeBounds(n);
+    using LAF = lighthost::ui::LightHostLookAndFeel;
+    const bool selected = (selectedNode == n.id);
 
-        g.setColour(isInput ? NP::nodeIn : NP::nodeOut);
-        g.fillRoundedRectangle(b.reduced(6, 2).toFloat(), 4.f);
-        g.setColour(NP::nodeBorder);
-        g.drawRoundedRectangle(b.reduced(6, 2).toFloat(), 4.f, 1.f);
-        
-        // Draw selection highlight (yellow border)
-        if (selectedNode == n.id)
+    if (n.type == NodeType::Input || n.type == NodeType::Output) {
+        // --- Endpoint rows on the side rails: raised, lighter than the rail, with an
+        //     accent stripe on the outer edge so they read as the signal's source/sink.
+        const bool isInput = (n.type == NodeType::Input);
+        const auto b  = nodeBounds(n);
+        const auto rf = b.reduced(8, 3).toFloat();
+
+        g.setColour(NP::shadow);
+        g.fillRoundedRectangle(rf.translated(0.f, 2.f), 8.f);
+
+        g.setGradientFill(ColourGradient(NP::endpointTop, 0.f, rf.getY(), NP::endpointBottom, 0.f, rf.getBottom(), false));
+        g.fillRoundedRectangle(rf, 8.f);
+        g.setColour(LAF::cardEdge().withAlpha(0.8f));
+        g.drawLine(rf.getX() + 8.f, rf.getY() + 1.f, rf.getRight() - 8.f, rf.getY() + 1.f, 1.f);
+
         {
-            g.setColour(Colour(0xFFFFDD00));
-            g.drawRoundedRectangle(b.reduced(6, 2).toFloat().expanded(2.f), 4.f, 3.f);
+            Graphics::ScopedSaveState ss(g);
+            Path clip;
+            clip.addRoundedRectangle(rf, 8.f);
+            g.reduceClipRegion(clip);
+            g.setColour(LAF::accent());
+            g.fillRect(isInput ? rf.withWidth(3.f) : rf.withTrimmedLeft(rf.getWidth() - 3.f));
         }
+
+        g.setColour(selected ? NP::selection : NP::endpointBorder);
+        g.drawRoundedRectangle(rf.reduced(0.5f), 8.f, selected ? 1.5f : 1.f);
+
+        // Accent status dot with glow.
+        const auto dot = Rectangle<float>(7.f, 7.f).withCentre({ isInput ? rf.getX() + 15.f : rf.getRight() - 15.f, rf.getCentreY() });
+        g.setColour(LAF::accent().withAlpha(0.4f));
+        g.fillEllipse(dot.expanded(3.f));
+        g.setColour(LAF::accent());
+        g.fillEllipse(dot);
 
         const auto textRect = isInput
-            ? b.reduced(8, 0).withTrimmedRight(16)
-            : b.reduced(8, 0).withTrimmedLeft(16);
-        g.setColour(NP::rowText);
-        g.setFont(Font(FontOptions{}.withHeight(12.f)));
-        g.drawText(n.name, textRect, Justification::centredLeft, true);
+            ? b.reduced(8, 0).withTrimmedLeft(24).withTrimmedRight(12)
+            : b.reduced(8, 0).withTrimmedLeft(12).withTrimmedRight(24);
+        g.setColour(Colour(0xfff4f0e9));
+        g.setFont(LAF::display(12.5f, true));
+        g.drawText(n.name.isEmpty() ? String("<none>") : n.name, textRect,
+                   isInput ? Justification::centredLeft : Justification::centredRight, true);
 
-        // Port dot on inner edge
-        const auto portPt = isInput ? outputPortPos(n) : inputPortPos(n);
-        const float pr = (float)PluginNode::getPortRadius();
-        g.setColour(isInput ? NP::portOut : NP::portIn);
-        g.fillEllipse(portPt.x - pr, portPt.y - pr, pr*2, pr*2);
-        g.setColour(NP::nodeBorder);
-        g.drawEllipse(portPt.x - pr, portPt.y - pr, pr*2, pr*2, 1.f);
+        drawPortDot(g, isInput ? outputPortPos(n) : inputPortPos(n));
+    } else if (isNodeBypassed(*graph, n)) {
+        // --- Bypassed plugin: hollow, hatched, dashed outline — clearly "out of the chain".
+        const auto bf = n.bounds().toFloat().reduced(0.5f);
+        Path body;
+        body.addRoundedRectangle(bf, 9.f);
 
+        g.setColour(NP::bypassFill);
+        g.fillPath(body);
+        {
+            Graphics::ScopedSaveState ss(g);
+            g.reduceClipRegion(body);
+            g.setColour(NP::bypassHatch);
+            for (float x = bf.getX() - bf.getHeight(); x < bf.getRight(); x += 9.f) {
+                g.drawLine(x, bf.getBottom(), x + bf.getHeight(), bf.getY(), 1.5f);
+            }
+        }
+
+        Path dashed;
+        const float dashes[] = { 5.f, 4.f };
+        PathStrokeType(selected ? 1.5f : 1.2f).createDashedStroke(dashed, body, dashes, 2);
+        g.setColour(selected ? NP::selection : NP::bypassEdge);
+        g.fillPath(dashed);
+        if (selected) {
+            g.setColour(NP::selection.withAlpha(0.25f));
+            g.drawRoundedRectangle(bf.expanded(2.5f), 11.f, 2.f);
+        }
+
+        // Hollow status ring.
+        const auto dot = Rectangle<float>(8.f, 8.f).withCentre({ bf.getX() + 22.f, bf.getCentreY() });
+        g.setColour(NP::bypassEdge);
+        g.drawEllipse(dot, 1.5f);
+
+        auto textArea = n.bounds().withTrimmedLeft(34).withTrimmedRight(PluginNode::getPortRadius() + 8).reduced(0, 10);
+        g.setColour(LAF::textSecond());
+        g.setFont(LAF::display(13.f, true));
+        g.drawText(n.name, textArea.removeFromTop(textArea.getHeight() / 2 + 2), Justification::bottomLeft, true);
+
+        // "BYPASSED" pill badge.
+        g.setFont(LAF::mono(8.5f));
+        const auto label = String("BYPASSED");
+        const int pillW = GlyphArrangement::getStringWidthInt(g.getCurrentFont(), label) + 12;
+        const auto pill = Rectangle<int>(textArea.getX(), textArea.getY() + 1, pillW, 13).toFloat();
+        g.setColour(LAF::accent().withAlpha(0.18f));
+        g.fillRoundedRectangle(pill, 6.5f);
+        g.setColour(LAF::accent().withAlpha(0.7f));
+        g.drawRoundedRectangle(pill.reduced(0.5f), 6.f, 1.f);
+        g.setColour(LAF::accent());
+        g.drawText(label, pill.toNearestInt(), Justification::centred, false);
+
+        drawPortDot(g, n.inputPort(),  true);
+        drawPortDot(g, n.outputPort(), true);
     } else {
-        // --- Floating plugin node ---
-        bool bypassed = false;
-        if (auto* graphNode = graph->getNodeForId(n.graphNodeId)) {
-            bypassed = graphNode->isBypassed();
+        // --- Active plugin card (NodeCard style) ---
+        const auto bf = n.bounds().toFloat().reduced(0.5f);
+
+        g.setColour(NP::shadow);
+        g.fillRoundedRectangle(bf.translated(0.f, 3.f).expanded(1.f), 10.f);
+
+        g.setGradientFill(ColourGradient(NP::cardTop, 0.f, bf.getY(), LAF::cardBottom(), 0.f, bf.getBottom(), false));
+        g.fillRoundedRectangle(bf, 9.f);
+        g.setColour(LAF::cardEdge().withAlpha(0.7f));
+        g.drawLine(bf.getX() + 8.f, bf.getY() + 1.f, bf.getRight() - 8.f, bf.getY() + 1.f, 1.f);
+        g.setColour(selected ? NP::selection : NP::cardBorder);
+        g.drawRoundedRectangle(bf, 9.f, selected ? 1.5f : 1.f);
+        if (selected) {
+            g.setColour(NP::selection.withAlpha(0.25f));
+            g.drawRoundedRectangle(bf.expanded(2.5f), 11.f, 2.f);
         }
 
-        const auto bf = n.bounds().toFloat();
-        g.setColour(Colour(0x40000000));
-        g.fillRoundedRectangle(bf.translated(2, 2), 6.f);
-        if (!bypassed) {
-            g.setColour(NP::nodePlugin);
-        } else {
-            g.setColour(NP::nodeOut);
-        }
-        g.fillRoundedRectangle(bf, 6.f);
-        g.setColour(NP::nodeBorder);
-        g.drawRoundedRectangle(bf, 6.f, 1.5f);
-        
-        // Draw selection highlight (yellow border)
-        if (selectedNode == n.id)
-        {
-            g.setColour(Colour(0xFFFFDD00));
-            g.drawRoundedRectangle(bf.expanded(2.f), 6.f, 3.f);
-        }
-        
-        g.setColour(NP::nodeText);
-        g.setFont(Font(FontOptions{}.withHeight(12.f).withStyle("Bold")));
-        g.drawText(n.name, n.bounds().reduced(PluginNode::getPortRadius() + 4, 0), Justification::centred, true
-                   );
-        
-        g.setColour(NP::nodeHint);
-        g.setFont(Font(FontOptions{}.withHeight(10.f)));
-        g.drawText("double-click", n.bounds().withTrimmedTop(n.bounds().getHeight() / 2 + 2), Justification::centred, false
-                   );
-        
-        auto drawPort = [&](Point<int> pt, Colour col)
-        {
-            const float pr = (float)PluginNode::getPortRadius();
-            g.setColour(col);
-            g.fillEllipse(pt.x - pr, pt.y - pr, pr*2, pr*2);
-            g.setColour(NP::nodeBorder);
-            g.drawEllipse(pt.x - pr, pt.y - pr, pr*2, pr*2, 1.f);
-        };
-        drawPort(n.inputPort(),  NP::portIn);
-        drawPort(n.outputPort(), NP::portOut);
+        const auto dot = Rectangle<float>(8.f, 8.f).withCentre({ bf.getX() + 22.f, bf.getCentreY() });
+        g.setColour(LAF::accent().withAlpha(0.35f));
+        g.fillEllipse(dot.expanded(2.f));
+        g.setColour(LAF::accent());
+        g.fillEllipse(dot);
+
+        auto textArea = n.bounds().withTrimmedLeft(34).withTrimmedRight(PluginNode::getPortRadius() + 8).reduced(0, 10);
+        g.setColour(LAF::textPrimary());
+        g.setFont(LAF::display(13.f, true));
+        g.drawText(n.name, textArea.removeFromTop(textArea.getHeight() / 2 + 2), Justification::bottomLeft, true);
+
+        g.setColour(LAF::textSecond());
+        g.setFont(LAF::mono(9.f));
+        g.drawText("DOUBLE-CLICK TO EDIT", textArea, Justification::topLeft, true);
+
+        drawPortDot(g, n.inputPort());
+        drawPortDot(g, n.outputPort());
     }
 }
 
 void NodeGraphCanvas::drawWire(Graphics& g, Point<int> a, Point<int> b, bool active) const
 {
-    g.setColour(active ? NP::wireActive : NP::wireCol);
+    g.setColour(active ? NP::selection : NP::wireCol);
     Path p;
     p.startNewSubPath(a.toFloat());
     const float cx = (a.x + b.x) * 0.5f;
     p.cubicTo(cx, (float)a.y, cx, (float)b.y, (float)b.x, (float)b.y);
-    g.strokePath(p, PathStrokeType(2.f));
+    g.strokePath(p, PathStrokeType(2.4f, PathStrokeType::curved, PathStrokeType::rounded));
 }
 
 void NodeGraphCanvas::paint(Graphics& g)
 {
-    g.fillAll(NP::canvas);
+    using LAF = lighthost::ui::LightHostLookAndFeel;
+
+    // Radial "tactile" backdrop, as in the LightHost canvas.
+    g.setGradientFill(ColourGradient(LAF::appBgTop(), getWidth() * 0.5f, -40.f,
+                                     LAF::appBgBottom(), getWidth() * 0.5f, (float)getHeight(), true));
+    g.fillAll();
+
     g.setColour(NP::grid);
-    for (int x = getZoneWidth(); x < getWidth() - getZoneWidth(); x += 32)
-        for (int y = 0; y < getHeight(); y += 32)
-            g.fillRect(x, y, 1, 1);
+    for (int x = getZoneWidth() + 16; x < getWidth() - getZoneWidth(); x += 24) {
+        for (int y = 12; y < getHeight(); y += 24) {
+            g.fillRect(x, y, 2, 2);
+        }
+    }
 
     drawZoneBackgrounds(g);
 
     // Committed wires
-    for (const auto& wire : wires)
-    {
+    for (const auto& wire : wires) {
         const PluginNode *fr = nullptr, *to = nullptr;
-        for (const auto& nd : nodes)
-        {
+        for (const auto& nd : nodes) {
             if (nd.id == wire.fromNode) fr = &nd;
             if (nd.id == wire.toNode)   to = &nd;
         }
-        if (fr && to) drawWire(g, outputPortPos(*fr), inputPortPos(*to), false);
+        if (!fr || !to) continue;
+
+        if (isNodeBypassed(*graph, *fr) || isNodeBypassed(*graph, *to)) {
+            const auto a = outputPortPos(*fr), b = inputPortPos(*to);
+            Path p, dashed;
+            const float cx = (a.x + b.x) * 0.5f;
+            p.startNewSubPath(a.toFloat());
+            p.cubicTo(cx, (float)a.y, cx, (float)b.y, (float)b.x, (float)b.y);
+            const float dashes[] = { 6.f, 5.f };
+            PathStrokeType(2.f, PathStrokeType::curved, PathStrokeType::rounded).createDashedStroke(dashed, p, dashes, 2);
+            g.setColour(NP::wireCol.withAlpha(0.6f));
+            g.fillPath(dashed);
+        } else {
+            drawWire(g, outputPortPos(*fr), inputPortPos(*to), false);
+        }
     }
 
-    // Live drag
-    if (draggingWire && wireFrom >= 0)
-    {
+    // Live drag: accent while free, green/red while hovering a port.
+    if (draggingWire && wireFrom >= 0) {
         for (const auto& nd : nodes)
         {
             if (nd.id != wireFrom) continue;
-            int dummy = -1;
-            bool valid;
+            int target = -1;
+            bool overPort, valid;
             Point<int> anchor;
-            if (!wireDragFromInput)
-            {
-                anchor = outputPortPos(nd);
-                valid  = nearInputPort(wireCursor, dummy) && isValidWire(wireFrom, dummy);
+            if (!wireDragFromInput) {
+                anchor   = outputPortPos(nd);
+                overPort = nearInputPort(wireCursor, target);
+                valid    = overPort && isValidWire(wireFrom, target);
+            } else {
+                anchor   = inputPortPos(nd);
+                overPort = nearOutputPort(wireCursor, target);
+                valid    = overPort && isValidWire(target, wireFrom);
             }
-            else
-            {
-                anchor = inputPortPos(nd);
-                valid  = nearOutputPort(wireCursor, dummy) && isValidWire(dummy, wireFrom);
-            }
-            g.setColour(valid ? NP::wireActive : NP::wireBad);
+            const Colour c = !overPort ? LAF::accent() : (valid ? NP::wireValid : NP::wireBad);
+            g.setColour(c.withAlpha(0.85f));
             Path p;
             const float cx = (anchor.x + wireCursor.x) * 0.5f;
             p.startNewSubPath(anchor.toFloat());
             p.cubicTo(cx, (float)anchor.y, cx, (float)wireCursor.y,
                       (float)wireCursor.x, (float)wireCursor.y);
-            g.strokePath(p, PathStrokeType(2.f));
+            g.strokePath(p, PathStrokeType(2.4f, PathStrokeType::curved, PathStrokeType::rounded));
             break;
         }
     }
@@ -413,13 +521,18 @@ void NodeGraphCanvas::paint(Graphics& g)
     for (const auto& nd : nodes) drawNode(g, nd);
 
     bool hasPlugin = false;
-    for (const auto& nd : nodes) if (nd.type == NodeType::Plugin) { hasPlugin = true; break; }
-    if (!hasPlugin)
-    {
-        g.setColour(Colour(0xFF999999));
-        g.setFont(Font(FontOptions{}.withHeight(11.f)));
+    for (const auto& nd : nodes) {
+        if (nd.type == NodeType::Plugin) {
+            hasPlugin = true;
+            break;
+        }
+    }
+
+    if (!hasPlugin) {
+        g.setColour(LAF::textTert());
+        g.setFont(LAF::mono(10.5f));
         g.drawText("Right-click to add a plugin",
-            Rectangle<int>(getZoneWidth(), 0, getWidth()-2*getZoneWidth(), getHeight()), Justification::centred, false
+            Rectangle<int>(getZoneWidth(), 0, getWidth() - 2 * getZoneWidth(), getHeight()), Justification::centred, false
         );
     }
 }
@@ -492,12 +605,12 @@ void NodeGraphCanvas::mouseDown(const MouseEvent& e)
     int hitNode = nd.id; // for capture
     selectedNode = nd.id ? nd.id : -1;
     repaint();
-    
+
     // ================== RIGHT-CLICK: Context Menu ==================
     if (e.mods.isRightButtonDown())
     {
         const auto screenPos = localPointToGlobal(e.getPosition());
-        
+
         if (nd.id)
         {
             // Right-click on a node
@@ -541,9 +654,9 @@ void NodeGraphCanvas::mouseDown(const MouseEvent& e)
         }
         return;
     }
-    
+
     // ================== LEFT-CLICK: Select, Drag, Wire ==================
-    
+
     // Check if clicking near a port (to start wire drag)
     int portNode = -1;
     if (nearOutputPort(e.getPosition(), portNode))
@@ -570,7 +683,7 @@ void NodeGraphCanvas::mouseDown(const MouseEvent& e)
     {
         // Enable keyboard focus for DEL key
         grabKeyboardFocus();
-        
+
         // For Plugin nodes, prepare to drag
         for (const auto& nd : nodes)
             if (nd.id == selectedNode && nd.type == NodeType::Plugin)
@@ -592,7 +705,7 @@ void NodeGraphCanvas::mouseDrag(const MouseEvent& e)
             if (nd.id != draggingNode) continue;
             const int lo = getZoneWidth();
             const int hi = getWidth() - getZoneWidth() - PluginNode::getWidth();
-            
+
             auto newPos = Point<int>(std::max(lo, std::min(hi, e.x - PluginNode::getWidth() / 2)),
                                      std::max(0,  std::min(getHeight() - PluginNode::getHeight(), e.y - PluginNode::getHeight() / 2)));
             if (nd.pos != newPos)
@@ -705,7 +818,7 @@ void NodeGraphCanvas::showPluginPicker(Point<int> canvasPos)
             auto nodePtr = graph->addNode(
                 std::unique_ptr<AudioProcessor>(std::move(instance)));
             if (!nodePtr) return;
-            
+
             // Add parameter change listener so we save when plugin params change
             if (auto* proc = nodePtr->getProcessor())
             {
@@ -783,17 +896,17 @@ void NodeGraphCanvas::removeNode(int nodeId)
                 if (auto* graphNode = graph->getNodeForId(nd.graphNodeId))
                     graph->removeNode(graphNode);
             }
-            
+
             // Remove from visual nodes
             nodes.erase(std::remove_if(nodes.begin(), nodes.end(),
                 [nodeId](const PluginNode& n) { return n.id == nodeId; }),
                 nodes.end());
-            
+
             // Remove wires connected to this node
             wires.erase(std::remove_if(wires.begin(), wires.end(),
                 [nodeId](const NodeWire& w) { return w.fromNode == nodeId || w.toNode == nodeId; }),
                 wires.end());
-            
+
             selectedNode = -1;
             graph->rebuild();  // Rebuild graph after removing node
             onGraphChanged();
@@ -960,7 +1073,7 @@ void NodeGraphCanvas::loadState(const XmlElement& xml)
                 if (nodePtr)
                 {
                     n.graphNodeId = nodePtr->nodeID;
-                    
+
                     // Add parameter change listener so we save when plugin params change
                     if (auto* proc = nodePtr->getProcessor())
                     {
@@ -970,7 +1083,7 @@ void NodeGraphCanvas::loadState(const XmlElement& xml)
                         // Store the listener in global map to keep it alive
                         g_pluginListeners[nodePtr->nodeID.uid] = std::move(listener);
                     }
-                    
+
                     DBG("Successfully added plugin node: " << n.name);
                     DBG(" ID: " << String(n.graphNodeId.uid));
                 }
@@ -1033,7 +1146,7 @@ void NodeGraphCanvas::updateInOutNames() {
 void NodeGraphCanvas::onGraphChanged() {
     if (posted) return;
     posted++;
-    
+
     MessageManager::callAsync([this] {
         if (auto xml = getState()) {
             AppProperties::get()->setValue("nodeGraphState", xml.get());

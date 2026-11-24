@@ -1,4 +1,5 @@
 #include "PluginWindow.hpp"
+#include "LightHostLookAndFeel.h"
 
 class PluginWindow;
 static Array <PluginWindow*> activePluginWindows;
@@ -67,7 +68,7 @@ public:
 
     void paint (Graphics& g)
     {
-        g.fillAll (Colours::grey);
+        g.fillAll (lighthost::ui::LightHostLookAndFeel::appBg());
     }
 
     void resized()
@@ -88,7 +89,7 @@ private:
 PluginWindow::PluginWindow (Component* const pluginEditor,
                             AudioProcessorGraph::Node* const o,
                             WindowFormatType t)
-    : DocumentWindow (pluginEditor->getName(), Colours::lightgrey, DocumentWindow::minimiseButton | DocumentWindow::closeButton), owner (o), type (t) 
+    : DocumentWindow (pluginEditor->getName(), lighthost::ui::LightHostLookAndFeel::appBg(), DocumentWindow::minimiseButton | DocumentWindow::closeButton), owner (o), type (t)
 {
     setSize(400, 300);
     setUsingNativeTitleBar(true);
@@ -101,6 +102,7 @@ PluginWindow::PluginWindow (Component* const pluginEditor,
 
     // Must float like the graph editor (MainWindow), otherwise it opens behind it.
     setAlwaysOnTop (true);
+    lighthost::ui::applyDarkWindowAppearance (*this);
     setVisible (true);
 
     activePluginWindows.add(this);

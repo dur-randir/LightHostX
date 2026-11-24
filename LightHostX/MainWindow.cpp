@@ -6,10 +6,11 @@
 //
 
 #include "MainWindow.hpp"
+#include "LightHostLookAndFeel.h"
 
 MainWindow::MainWindow(MainWindowContent* content)
         : DocumentWindow("LightHostX",
-            Colour::fromRGB(26, 26, 26),
+            lighthost::ui::LightHostLookAndFeel::appBg(),
             DocumentWindow::minimiseButton | DocumentWindow::closeButton
           )
 {
@@ -30,6 +31,8 @@ MainWindow::MainWindow(MainWindowContent* content)
     // Float it (NSFloatingWindowLevel) so it stays visible when focus moves elsewhere.
     // Any window opened from the editor must be always-on-top too, or it'll open behind.
     setAlwaysOnTop(true);
+
+    lighthost::ui::applyDarkWindowAppearance(*this);
 }
 
 void MainWindow::closeButtonPressed() {

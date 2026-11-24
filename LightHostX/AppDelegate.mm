@@ -9,6 +9,15 @@
 
 static constexpr int kNumChannels = 2;
 
+void lighthost::ui::applyDarkWindowAppearance(juce::Component& topLevelWindow) {
+    if (auto* peer = topLevelWindow.getPeer()) {
+        NSView* view = (NSView*) peer->getNativeHandle();
+        if (NSWindow* window = view.window) {
+            window.appearance = [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
+        }
+    }
+}
+
 @implementation AppDelegate
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
@@ -31,7 +40,7 @@ static constexpr int kNumChannels = 2;
     player = std::make_unique<AudioProcessorPlayer>();
     formatManager = std::make_unique<AudioPluginFormatManager>();
     knownPluginList = std::make_unique<KnownPluginList>();
-    lookAndFeel = std::make_unique<LookAndFeel_V3>();
+    lookAndFeel = std::make_unique<lighthost::ui::LightHostLookAndFeel>();
 
     LookAndFeel::setDefaultLookAndFeel(lookAndFeel.get());
 
@@ -127,6 +136,7 @@ static constexpr int kNumChannels = 2;
 
     Process::makeForegroundProcess();
     mainWindow->addToDesktop();
+    lighthost::ui::applyDarkWindowAppearance(*mainWindow);
     mainWindow->setVisible(true);
     mainWindow->toFront(true);
 }
@@ -138,6 +148,7 @@ static constexpr int kNumChannels = 2;
 
     Process::makeForegroundProcess();
     pluginListWindow->addToDesktop();
+    lighthost::ui::applyDarkWindowAppearance(*pluginListWindow);
     pluginListWindow->setVisible(true);
     pluginListWindow->toFront(true);
 }

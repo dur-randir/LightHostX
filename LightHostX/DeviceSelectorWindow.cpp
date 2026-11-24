@@ -6,6 +6,7 @@
 //
 
 #include "DeviceSelectorWindow.hpp"
+#include "LightHostLookAndFeel.h"
 
 //==============================================================================
 // DeviceSelectorWindow 實現
@@ -14,7 +15,7 @@
 
 /// 建構函數：創建視窗並初始化對話框組件
 DeviceSelectorWindow::DeviceSelectorWindow(const String &title, AudioDeviceManagerSP dm, int maxIn, int maxOut, Point<int> pos, std::function<void()> cb)
-    : DocumentWindow(title, Colours::lightgrey,
+    : DocumentWindow(title, lighthost::ui::LightHostLookAndFeel::appBg(),
         DocumentWindow::closeButton | DocumentWindow::minimiseButton, true),
         onConfirmCallback(std::move(cb)
     )
@@ -26,12 +27,13 @@ DeviceSelectorWindow::DeviceSelectorWindow(const String &title, AudioDeviceManag
     setContentOwned(dlg, false);   // 視窗擁有對話框生命週期
     setUsingNativeTitleBar(true); // 使用 Windows 原生標題欄
     setResizable(false, false);   // 禁用調整大小（由計時器控制）
-    setBackgroundColour(Colour::fromRGB(236, 236, 236));
 
     // 初始化視窗大小
     updateWindowSize();
     setTopLeftPosition(pos.x - getWidth() / 2, pos.y - getHeight() / 3);
     //setTopLeftPosition(250, 150); // 預設視窗左上角座標
+
+    lighthost::ui::applyDarkWindowAppearance(*this);
 }
 
 /// 關閉視窗並執行清理

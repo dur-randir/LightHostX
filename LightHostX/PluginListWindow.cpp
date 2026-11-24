@@ -7,9 +7,10 @@
 
 #include "PluginListWindow.hpp"
 #include "AppProperties.hpp"
+#include "LightHostLookAndFeel.h"
 
 PluginListWindow::PluginListWindow(KnownPluginList& list, AudioPluginFormatManager& pluginFormatManager)
-        : DocumentWindow("Available plugins", Colours::white,
+        : DocumentWindow("Available plugins", lighthost::ui::LightHostLookAndFeel::appBg(),
             DocumentWindow::minimiseButton | DocumentWindow::closeButton)
 {
     const File deadMansPedalFile(AppProperties::get()->getFile().getSiblingFile("RecentlyCrashedPluginsList"));
@@ -29,6 +30,8 @@ PluginListWindow::PluginListWindow(KnownPluginList& list, AudioPluginFormatManag
 
     // Must float like the graph editor (MainWindow), otherwise it opens behind it.
     setAlwaysOnTop(true);
+
+    lighthost::ui::applyDarkWindowAppearance(*this);
 }
 
 PluginListWindow::~PluginListWindow() {
