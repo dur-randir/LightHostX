@@ -16,7 +16,7 @@
    framework to you, and you must discontinue the installation or download
    process and cease use of the JUCE framework.
 
-   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-9-licence/
    JUCE Privacy Policy: https://juce.com/juce-privacy-policy
    JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
@@ -52,7 +52,9 @@ struct Viewport::DragToScrollListener final : private MouseListener,
     ~DragToScrollListener() override
     {
         viewport.contentHolder.removeMouseListener (this);
-        Desktop::getInstance().removeGlobalMouseListener (this);
+
+        if (auto* desktop = Desktop::getInstanceWithoutCreating())
+            desktop->removeGlobalMouseListener (this);
     }
 
     void stopOngoingAnimation()
@@ -186,7 +188,7 @@ void Viewport::deleteOrRemoveContentComp()
         if (deleteContent)
         {
             // This sets the content comp to a null pointer before deleting the old one, in case
-            // anything tries to use the old one while it's in mid-deletion..
+            // anything tries to use the old one while it's in mid-deletion.
             std::unique_ptr<Component> oldCompDeleter (contentComp.get());
             contentComp = nullptr;
         }
@@ -247,12 +249,20 @@ Point<int> Viewport::viewportPosToCompPos (Point<int> pos) const
 {
     jassert (contentComp != nullptr);
 
-    auto contentBounds = contentHolder.getLocalArea (contentComp.get(), contentComp->getLocalBounds());
+    const auto contentBounds = getContentBounds();
 
-    Point<int> p (jmax (jmin (0, contentHolder.getWidth()  - contentBounds.getWidth()),  jmin (0, -(pos.x))),
-                  jmax (jmin (0, contentHolder.getHeight() - contentBounds.getHeight()), jmin (0, -(pos.y))));
+    const Point p (jmax (jmin (0, contentHolder.getWidth()  - contentBounds.getWidth()),  jmin (0, -(pos.x))),
+                   jmax (jmin (0, contentHolder.getHeight() - contentBounds.getHeight()), jmin (0, -(pos.y))));
 
     return p.transformedBy (contentComp->getTransform().inverted());
+}
+
+Rectangle<int> Viewport::getContentBounds() const
+{
+    if (auto* cc = contentComp.get())
+        return contentHolder.getLocalArea (cc, cc->getLocalBounds());
+
+    return {};
 }
 
 void Viewport::setViewPosition (const int xPixelsOffset, const int yPixelsOffset)
@@ -401,16 +411,12 @@ void Viewport::updateVisibleArea()
         auto oldContentBounds = contentComp->getBounds();
         contentHolder.setBounds (contentArea);
 
-        // If the content has changed its size, that might affect our scrollbars, so go round again and re-calculate..
+        // If the content has changed its size, that might affect our scrollbars, so go round again and re-calculate.
         if (oldContentBounds == contentComp->getBounds())
             break;
     }
 
-    Rectangle<int> contentBounds;
-
-    if (auto cc = contentComp.get())
-        contentBounds = contentHolder.getLocalArea (cc, cc->getLocalBounds());
-
+    const auto contentBounds = getContentBounds();
     auto visibleOrigin = -contentBounds.getPosition();
 
     auto& hbar = getHorizontalScrollBar();
@@ -521,15 +527,22 @@ int Viewport::getScrollBarThickness() const
 
 void Viewport::scrollBarMoved (ScrollBar* scrollBarThatHasMoved, double newRangeStart)
 {
-    auto newRangeStartInt = roundToInt (newRangeStart);
+    const auto contentOrigin = -getContentBounds().getPosition();
+    const auto newRangeStartInt = roundToInt (newRangeStart);
 
-    if (scrollBarThatHasMoved == horizontalScrollBar.get())
+    for (const auto& [member, bar] : { std::tuple (&Point<int>::x, horizontalScrollBar.get()),
+                                       std::tuple (&Point<int>::y, verticalScrollBar.get()) })
     {
-        setViewPosition (newRangeStartInt, getViewPositionY());
-    }
-    else if (scrollBarThatHasMoved == verticalScrollBar.get())
-    {
-        setViewPosition (getViewPositionX(), newRangeStartInt);
+        if (scrollBarThatHasMoved != bar)
+            continue;
+
+        if (contentOrigin.*member == newRangeStartInt)
+            return;
+
+        auto pt = getViewPosition();
+        pt.*member = newRangeStartInt;
+        setViewPosition (pt);
+        return;
     }
 }
 

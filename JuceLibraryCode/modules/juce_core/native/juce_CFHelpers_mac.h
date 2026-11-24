@@ -16,7 +16,7 @@
    framework to you, and you must discontinue the installation or download
    process and cease use of the JUCE framework.
 
-   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-9-licence/
    JUCE Privacy Policy: https://juce.com/juce-privacy-policy
    JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
@@ -38,10 +38,9 @@
 namespace juce
 {
 
-template <typename CFType>
 struct CFObjectDeleter
 {
-    void operator() (CFType object) const noexcept
+    void operator() (CFTypeRef object) const noexcept
     {
         if (object != nullptr)
             CFRelease (object);
@@ -49,7 +48,23 @@ struct CFObjectDeleter
 };
 
 template <typename CFType>
-using CFUniquePtr = std::unique_ptr<std::remove_pointer_t<CFType>, CFObjectDeleter<CFType>>;
+struct CFRefRemover
+{
+    static_assert (std::is_pointer_v<CFType>, "CFType must be a Ref type");
+    using Type = std::remove_pointer_t<CFType>;
+};
+
+template <typename CFType>
+using CFRemoveRef = typename CFRefRemover<CFType>::Type;
+
+template <typename CFType>
+using CFUniquePtr = std::unique_ptr<CFRemoveRef<CFType>, CFObjectDeleter>;
+
+template <typename CFType>
+auto makeCFUniquePtr (CFType instance)
+{
+    return CFUniquePtr<CFType> { instance };
+}
 
 template <typename CFType>
 struct CFObjectHolder

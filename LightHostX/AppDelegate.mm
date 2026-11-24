@@ -36,7 +36,7 @@ static constexpr int kNumChannels = 2;
     LookAndFeel::setDefaultLookAndFeel(lookAndFeel.get());
 
     // Audio device
-    formatManager->addDefaultFormats();
+    addDefaultFormatsToManager(*formatManager);
 
     // Audio device
     std::unique_ptr<XmlElement> savedAudioState (AppProperties::get()->getXmlValue("audioDeviceState"));

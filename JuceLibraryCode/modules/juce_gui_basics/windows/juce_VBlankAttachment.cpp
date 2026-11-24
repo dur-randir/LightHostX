@@ -16,7 +16,7 @@
    framework to you, and you must discontinue the installation or download
    process and cease use of the JUCE framework.
 
-   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-9-licence/
    JUCE Privacy Policy: https://juce.com/juce-privacy-policy
    JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
@@ -36,6 +36,16 @@ namespace juce
 {
 
 VBlankAttachment::VBlankAttachment (Component* c, std::function<void()> callbackIn)
+    : owner (c),
+      callback ([cb = std::move (callbackIn)] (auto) { cb(); })
+{
+    jassert (owner != nullptr && callback);
+
+    updateOwner();
+    updatePeer();
+}
+
+VBlankAttachment::VBlankAttachment (Component* c, std::function<void (double)> callbackIn)
     : owner (c),
       callback (std::move (callbackIn))
 {
@@ -70,9 +80,9 @@ VBlankAttachment::~VBlankAttachment()
     cleanup();
 }
 
-void VBlankAttachment::onVBlank()
+void VBlankAttachment::onVBlank (double timestampSec)
 {
-    callback();
+    NullCheckedInvocation::invoke (callback, timestampSec);
 }
 
 void VBlankAttachment::componentParentHierarchyChanged (Component&)

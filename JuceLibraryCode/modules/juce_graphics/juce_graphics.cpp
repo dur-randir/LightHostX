@@ -16,7 +16,7 @@
    framework to you, and you must discontinue the installation or download
    process and cease use of the JUCE framework.
 
-   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-9-licence/
    JUCE Privacy Policy: https://juce.com/juce-privacy-policy
    JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
@@ -46,12 +46,16 @@
 #define JUCE_CORE_INCLUDE_JNI_HELPERS 1
 #define JUCE_CORE_INCLUDE_NATIVE_HEADERS 1
 #define JUCE_GRAPHICS_INCLUDE_COREGRAPHICS_HELPERS 1
+#define JUCE_GRAPHICS_INCLUDE_RENDERING_HELPERS 1
 
 #include "juce_graphics.h"
+
+#include <juce_core/detail/juce_FunctionPointerDestructor.h>
 
 //==============================================================================
 #if JUCE_MAC
  #import <QuartzCore/QuartzCore.h>
+ #include <CoreImage/CoreImage.h>
  #include <CoreText/CTFont.h>
 
 #elif JUCE_WINDOWS
@@ -94,6 +98,8 @@
   #pragma comment(lib, "dxguid.lib")
  #endif
 
+ #include "native/juce_Direct2DPixelDataPage_windows.h"
+
 #elif JUCE_IOS
  #import <QuartzCore/QuartzCore.h>
  #import <CoreText/CoreText.h>
@@ -108,12 +114,20 @@
  #endif
 #elif JUCE_ANDROID
  #include <android/font_matcher.h>
+ #include <android/system_fonts.h>
 #endif
 
 #if JUCE_USE_FREETYPE
  #include <ft2build.h>
  #include FT_FREETYPE_H
  #include FT_ADVANCES_H
+ #include FT_TRUETYPE_TABLES_H
+ #include FT_MULTIPLE_MASTERS_H
+ #include FT_GLYPH_H
+
+ #ifdef FT_COLOR_H
+  #include FT_COLOR_H
+ #endif
 #endif
 
 #if JUCE_USE_FONTCONFIG
@@ -140,24 +154,32 @@
 
 #include <juce_graphics/fonts/harfbuzz/hb-ot.h>
 
+extern "C"
+{
+#include <juce_graphics/unicode/sheenbidi/Headers/SheenBidi/SheenBidi.h>
+} // extern "C"
+
 #if JUCE_UNIT_TESTS
  #include "fonts/juce_TypefaceTestData.cpp"
 #endif
 
 //==============================================================================
-#include "fonts/juce_FunctionPointerDestructor.h"
+#include "juce_core/zip/juce_zlib.h"
+
 #include "native/juce_EventTracing.h"
+#include "images/juce_ImagePixelDataNativeExtensions.h"
 
 #include "unicode/juce_UnicodeGenerated.cpp"
 #include "unicode/juce_UnicodeUtils.cpp"
 #include "unicode/juce_UnicodeLine.cpp"
 #include "unicode/juce_UnicodeScript.cpp"
-#include "unicode/juce_UnicodeBrackets.cpp"
 #include "unicode/juce_UnicodeBidi.cpp"
 #include "unicode/juce_Unicode.cpp"
 #include "colour/juce_Colour.cpp"
+#include "detail/juce_TwoPointConicalGradient.cpp"
 #include "colour/juce_ColourGradient.cpp"
 #include "colour/juce_Colours.cpp"
+#include "colour/juce_PixelFormats.cpp"
 #include "colour/juce_FillType.cpp"
 #include "geometry/juce_AffineTransform.cpp"
 #include "geometry/juce_EdgeTable.cpp"
@@ -167,6 +189,7 @@
 #include "placement/juce_RectanglePlacement.cpp"
 #include "contexts/juce_GraphicsContext.cpp"
 #include "contexts/juce_LowLevelGraphicsSoftwareRenderer.cpp"
+#include "contexts/juce_ScopedBlendContext.cpp"
 #include "images/juce_Image.cpp"
 #include "images/juce_ImageCache.cpp"
 #include "images/juce_ImageConvolutionKernel.cpp"
@@ -174,22 +197,88 @@
 #include "image_formats/juce_GIFLoader.cpp"
 #include "image_formats/juce_JPEGLoader.cpp"
 #include "image_formats/juce_PNGLoader.cpp"
+#include "image_formats/juce_WebPLoader.cpp"
 #include "fonts/juce_AttributedString.cpp"
+#include "fonts/juce_FontComparators.h"
 #include "fonts/juce_Typeface.cpp"
+#include "fonts/juce_FontFeatures.cpp"
 #include "fonts/juce_FontOptions.cpp"
 #include "fonts/juce_Font.cpp"
 #include "detail/juce_Ranges.cpp"
-#include "fonts/juce_SimpleShapedText.cpp"
-#include "fonts/juce_JustifiedText.cpp"
-#include "fonts/juce_ShapedText.cpp"
+#include "detail/juce_SimpleShapedText.cpp"
+#include "detail/juce_JustifiedText.cpp"
+#include "detail/juce_ShapedText.cpp"
+#include "fonts/juce_GlyphArrangementOptions.cpp"
 #include "fonts/juce_GlyphArrangement.cpp"
 #include "fonts/juce_TextLayout.cpp"
 #include "effects/juce_DropShadowEffect.cpp"
 #include "effects/juce_GlowEffect.cpp"
 
+
+#include "drawables/juce_StrokeOptions.cpp"
+#include "drawables/juce_Drawable.cpp"
+#include "drawables/juce_DrawableComposite.cpp"
+#include "drawables/juce_DrawableImage.cpp"
+#include "drawables/juce_DrawablePath.cpp"
+#include "drawables/juce_DrawableRectangle.cpp"
+#include "drawables/juce_DrawableShape.cpp"
+#include "drawables/juce_DrawableText.cpp"
+
+#include "detail/juce_LunaSvgFontReplacement.cpp"
+
+// A project may be linking against lunasvg in which case this may already be defined on the command-line
+#ifndef LUNASVG_BUILD
+ #define LUNASVG_BUILD
+#endif
+#ifndef LUNASVG_BUILD_STATIC
+ #define LUNASVG_BUILD_STATIC
+#endif
+#define JUCE_PLUTOVG_BUILD
+#define JUCE_PLUTOVG_BUILD_STATIC
+
+JUCE_BEGIN_IGNORE_WARNINGS_MSVC (4100 4244 4267 6323)
+JUCE_BEGIN_IGNORE_WARNINGS_GCC_LIKE ("-Wfloat-conversion",
+                                     "-Wfloat-equal",
+                                     "-Wmissing-field-initializers",
+                                     "-Wshadow-field-in-constructor",
+                                     "-Wshadow-uncaptured-local",
+                                     "-Wshorten-64-to-32",
+                                     "-Wsign-conversion",
+                                     "-Wswitch-enum",
+                                     "-Wunused-parameter",
+                                     "-Wimplicit-int-float-conversion",
+                                     "-Wshadow",
+                                     "-Wunused-function",
+                                     "-Wignored-qualifiers")
+
+#include "drawables/lunasvg/include/lunasvg.h"
+#include "drawables/lunasvg/source/graphics.h"
+
+#include "drawables/lunasvg/source/graphics.cpp"
+#include "drawables/lunasvg/source/lunasvg.cpp"
+#include "drawables/lunasvg/source/svgelement.cpp"
+#include "drawables/lunasvg/source/svggeometryelement.cpp"
+#include "drawables/lunasvg/source/svglayoutstate.cpp"
+#include "drawables/lunasvg/source/svgpaintelement.cpp"
+#include "drawables/lunasvg/source/svgparser.cpp"
+#include "drawables/lunasvg/source/svgproperty.cpp"
+#include "drawables/lunasvg/source/svgrenderstate.cpp"
+#include "drawables/lunasvg/source/svgtextelement.cpp"
+
+JUCE_END_IGNORE_WARNINGS_GCC_LIKE
+JUCE_END_IGNORE_WARNINGS_MSVC
+
+#undef JUCE_PLUTOVG_BUILD_STATIC
+#undef JUCE_PLUTOVG_BUILD
+#undef LUNASVG_BUILD_STATIC
+#undef LUNASVG_BUILD
+
+#include "drawables/juce_SVGParser.cpp"
+
 #if JUCE_UNIT_TESTS
  #include "geometry/juce_Parallelogram_test.cpp"
  #include "geometry/juce_Rectangle_test.cpp"
+ #include "geometry/juce_RectangleList_test.cpp"
 #endif
 
 #if JUCE_USE_FREETYPE
@@ -204,15 +293,18 @@
  #include "native/juce_IconHelpers_mac.cpp"
 
 #elif JUCE_WINDOWS
+ #include "native/juce_Direct2DMetrics_windows.h"
+ #include "native/juce_Direct2DGraphicsContext_windows.h"
  #include "native/juce_DirectX_windows.h"
+ #include "native/juce_Direct2DImage_windows.h"
+ #include "native/juce_Direct2DGraphicsContextImpl_windows.h"
+ #include "native/juce_Direct2DImageContext_windows.h"
+
+ #include "native/juce_DirectX_windows.cpp"
  #include "native/juce_DirectWriteTypeface_windows.cpp"
  #include "native/juce_IconHelpers_windows.cpp"
- #include "native/juce_Direct2DHelpers_windows.cpp"
- #include "native/juce_Direct2DResources_windows.cpp"
- #include "native/juce_Direct2DImage_windows.h"
+ #include "native/juce_Direct2DGraphicsContextImpl_windows.cpp"
  #include "native/juce_Direct2DGraphicsContext_windows.cpp"
- #include "native/juce_Direct2DHwndContext_windows.cpp"
- #include "native/juce_Direct2DImageContext_windows.h"
  #include "native/juce_Direct2DImageContext_windows.cpp"
  #include "native/juce_Direct2DImage_windows.cpp"
  #include "native/juce_Direct2DMetrics_windows.cpp"

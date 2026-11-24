@@ -16,7 +16,7 @@
    framework to you, and you must discontinue the installation or download
    process and cease use of the JUCE framework.
 
-   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-9-licence/
    JUCE Privacy Policy: https://juce.com/juce-privacy-policy
    JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
@@ -75,7 +75,7 @@ DocumentWindow::~DocumentWindow()
 {
     // Don't delete or remove the resizer components yourself! They're managed by the
     // DocumentWindow, and you should leave them alone! You may have deleted them
-    // accidentally by careless use of deleteAllChildren()..?
+    // accidentally by careless use of deleteAllChildren()?
     jassert (menuBar == nullptr || getIndexOfChildComponent (menuBar.get()) >= 0);
     jassert (titleBarButtons[0] == nullptr || getIndexOfChildComponent (titleBarButtons[0].get()) >= 0);
     jassert (titleBarButtons[1] == nullptr || getIndexOfChildComponent (titleBarButtons[1].get()) >= 0);
@@ -190,6 +190,21 @@ void DocumentWindow::minimiseButtonPressed()
 void DocumentWindow::maximiseButtonPressed()
 {
     setFullScreen (! isFullScreen());
+}
+
+void DocumentWindow::windowControlClickedClose()
+{
+    closeButtonPressed();
+}
+
+void DocumentWindow::windowControlClickedMinimise()
+{
+    minimiseButtonPressed();
+}
+
+void DocumentWindow::windowControlClickedMaximise()
+{
+    maximiseButtonPressed();
 }
 
 //==============================================================================
@@ -326,7 +341,7 @@ auto DocumentWindow::findControlAtPoint (Point<float> pt) const -> WindowControl
     }
 
     for (const auto& c : getChildren())
-        if (c->contains (c->getLocalPoint (this, pt)))
+        if (detail::ComponentHelpers::hitTest (*c, c->getLocalPoint (this, pt)))
             return WindowControlKind::client;
 
     return WindowControlKind::caption;

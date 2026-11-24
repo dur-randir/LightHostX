@@ -16,7 +16,7 @@
    framework to you, and you must discontinue the installation or download
    process and cease use of the JUCE framework.
 
-   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-9-licence/
    JUCE Privacy Policy: https://juce.com/juce-privacy-policy
    JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
@@ -49,7 +49,7 @@ public:
     Win32NativeFileChooser (Component* parent, int flags, FilePreviewComponent* previewComp,
                             const File& startingFile, const String& titleToUse,
                             const String& filtersToUse)
-        : Thread ("Native Win32 FileChooser"),
+        : Thread (SystemStats::getJUCEVersion() + ": Native Win32 FileChooser"),
           owner (parent),
           title (titleToUse),
           filtersString (filtersToUse.replaceCharacter (',', ';')),
@@ -296,7 +296,7 @@ private:
             {
                 HWND hwnd = nullptr;
 
-                if (auto window = addComSmartPtrOwner (d).getInterface<IOleWindow>())
+                if (auto window = ComSmartPtr (d, IncrementRef::yes).getInterface<IOleWindow>())
                     window->GetWindow (&hwnd);
 
                 ScopedLock lock (owner.deletingDialog);
@@ -827,7 +827,7 @@ public:
           nativeFileChooser (std::make_unique<Win32NativeFileChooser> (this, flagsIn, previewComp, fileChooser.startingFile,
                                                                        fileChooser.title, fileChooser.filters))
     {
-        auto mainMon = Desktop::getInstance().getDisplays().getPrimaryDisplay()->userArea;
+        auto mainMon = Desktop::getInstance().getDisplays().getPrimaryDisplay()->userBounds.toNearestInt();
 
         setBounds (mainMon.getX() + mainMon.getWidth() / 4,
                    mainMon.getY() + mainMon.getHeight() / 4,

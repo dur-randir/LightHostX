@@ -16,7 +16,7 @@
    framework to you, and you must discontinue the installation or download
    process and cease use of the JUCE framework.
 
-   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-9-licence/
    JUCE Privacy Policy: https://juce.com/juce-privacy-policy
    JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
@@ -47,6 +47,8 @@ public:
         LinuxEventLoop::registerFdCallback (getReadHandle(),
                                             [this] (int fd)
                                             {
+                                                const auto timeout = Time::getMillisecondCounter() + 100;
+
                                                 while (auto msg = popNextMessage (fd))
                                                 {
                                                     JUCE_TRY
@@ -54,6 +56,11 @@ public:
                                                         msg->messageCallback();
                                                     }
                                                     JUCE_CATCH_EXCEPTION
+
+                                                    // Avoid starving other LinuxEventLoop callbacks
+                                                    // such as the XWindowSystem.
+                                                    if (Time::getMillisecondCounter() > timeout)
+                                                        break;
                                                 }
                                             });
     }
@@ -74,9 +81,9 @@ public:
         ScopedLock sl (lock);
         queue.add (msg);
 
-        if (bytesInSocket < maxBytesInSocketQueue)
+        if (! socketSignalled)
         {
-            bytesInSocket++;
+            socketSignalled = true;
 
             ScopedUnlock ul (lock);
             unsigned char x = 0xff;
@@ -85,15 +92,14 @@ public:
     }
 
     //==============================================================================
-    JUCE_DECLARE_SINGLETON (InternalMessageQueue, false)
+    JUCE_DECLARE_SINGLETON_INLINE (InternalMessageQueue, false)
 
 private:
     CriticalSection lock;
     ReferenceCountedArray <MessageManager::MessageBase> queue;
 
     int msgpipe[2];
-    int bytesInSocket = 0;
-    static constexpr int maxBytesInSocketQueue = 128;
+    bool socketSignalled = false;
 
     int getWriteHandle() const noexcept  { return msgpipe[0]; }
     int getReadHandle() const noexcept   { return msgpipe[1]; }
@@ -101,21 +107,20 @@ private:
     MessageManager::MessageBase::Ptr popNextMessage (int fd) noexcept
     {
         const ScopedLock sl (lock);
+        auto msg = queue.removeAndReturn (0);
 
-        if (bytesInSocket > 0)
+        if (queue.isEmpty() && socketSignalled)
         {
-            --bytesInSocket;
+            socketSignalled = false;
 
             ScopedUnlock ul (lock);
             unsigned char x;
             [[maybe_unused]] auto numBytes = read (fd, &x, 1);
         }
 
-        return queue.removeAndReturn (0);
+        return msg;
     }
 };
-
-JUCE_IMPLEMENT_SINGLETON (InternalMessageQueue)
 
 //==============================================================================
 /*
@@ -230,7 +235,7 @@ public:
     void removeListener (LinuxEventLoopInternal::Listener& listener)         { listeners.remove (&listener); }
 
     //==============================================================================
-    JUCE_DECLARE_SINGLETON (InternalRunLoop, false)
+    JUCE_DECLARE_SINGLETON_INLINE (InternalRunLoop, false)
 
 private:
     using SharedCallback = std::shared_ptr<std::function<void()>>;
@@ -281,8 +286,6 @@ private:
 
     ListenerList<LinuxEventLoopInternal::Listener> listeners;
 };
-
-JUCE_IMPLEMENT_SINGLETON (InternalRunLoop)
 
 //==============================================================================
 namespace LinuxErrorHandling

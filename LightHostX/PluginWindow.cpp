@@ -122,7 +122,7 @@ PluginWindow* PluginWindow::getWindowFor (AudioProcessorGraph::Node* const node,
     AudioProcessorEditor* ui = nullptr;
 
     if (type == Normal) {
-        ui = processor->createEditorIfNeeded();
+        ui = processor->createEditorAndMakeActive();
 
         if (ui == nullptr) {
             type = Generic;

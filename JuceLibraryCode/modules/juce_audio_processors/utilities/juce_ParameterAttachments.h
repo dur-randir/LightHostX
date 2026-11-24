@@ -16,7 +16,7 @@
    framework to you, and you must discontinue the installation or download
    process and cease use of the JUCE framework.
 
-   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-9-licence/
    JUCE Privacy Policy: https://juce.com/juce-privacy-policy
    JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
@@ -56,7 +56,7 @@ class ParameterAttachment   : private AudioProcessorParameter::Listener,
                               private AsyncUpdater
 {
 public:
-    /** Listens to a parameter and calls the the provided function in response to
+    /** Listens to a parameter and calls the provided function in response to
         parameter changes. If an undoManager is supplied `beginNewTransaction` will
         be called on it whenever the UI requests a parameter change via this attachment.
 
@@ -275,7 +275,7 @@ class WebSliderParameterAttachment   : private WebSliderRelay::Listener
 public:
     /** Creates a connection between a plug-in parameter and a WebSliderRelay.
 
-        @param parameter     The parameter to use
+        @param parameterIn   The parameter to use
         @param sliderStateIn The WebSliderRelay to use
         @param undoManager   An optional UndoManager
     */
@@ -323,7 +323,7 @@ class WebToggleButtonParameterAttachment  : private WebToggleButtonRelay::Listen
 public:
     /** Creates a connection between a plug-in parameter and a WebToggleButtonRelay.
 
-        @param parameter     The parameter to use
+        @param parameterIn   The parameter to use
         @param button        The WebToggleButtonRelay to use
         @param undoManager   An optional UndoManager
     */
@@ -368,7 +368,7 @@ class WebComboBoxParameterAttachment   : private WebComboBoxRelay::Listener
 public:
     /** Creates a connection between a plug-in parameter and a WebComboBoxRelay.
 
-        @param parameter     The parameter to use
+        @param parameterIn   The parameter to use
         @param combo         The WebComboBoxRelay to use
         @param undoManager   An optional UndoManager
     */

@@ -16,7 +16,7 @@
    framework to you, and you must discontinue the installation or download
    process and cease use of the JUCE framework.
 
-   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-9-licence/
    JUCE Privacy Policy: https://juce.com/juce-privacy-policy
    JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
@@ -35,63 +35,63 @@
 namespace juce::detail
 {
 
-#if JUCE_MSVC
- // required to enable the newer dialog box on vista and above
- #pragma comment(linker,                             \
-         "\"/MANIFESTDEPENDENCY:type='Win32' "       \
-         "name='Microsoft.Windows.Common-Controls' " \
-         "version='6.0.0.0' "                        \
-         "processorArchitecture='*' "                \
-         "publicKeyToken='6595b64144ccf1df' "        \
-         "language='*'\""                            \
-     )
-#endif
-
 std::unique_ptr<ScopedMessageBoxInterface> ScopedMessageBoxInterface::create (const MessageBoxOptions& options)
 {
-    class WindowsMessageBoxBase : public ScopedMessageBoxInterface
+    class WindowsTaskDialog : public ScopedMessageBoxInterface
     {
     public:
-        explicit WindowsMessageBoxBase (Component* comp)
-            : associatedComponent (comp) {}
+        explicit WindowsTaskDialog (const MessageBoxOptions& opts)
+            : associatedComponent (opts.getAssociatedComponent()), options (opts) {}
 
-        void runAsync (std::function<void (int)> recipient) override
+        void runAsync (std::function<void (std::optional<int>)> recipient) override
         {
             future = std::async (std::launch::async, [showMessageBox = getShowMessageBox(), recipient]
             {
-                const auto initComResult = CoInitializeEx (nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+                const auto messageResult = std::invoke ([&]() -> std::optional<int>
+                {
+                    const auto initComResult = CoInitializeEx (nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
 
-                if (initComResult != S_OK)
-                    return;
+                    if (initComResult != S_OK)
+                        return {};
 
-                const ScopeGuard scope { [] { CoUninitialize(); } };
+                    const ScopeGuard scope { [] { CoUninitialize(); } };
 
-                const auto messageResult = showMessageBox != nullptr ? showMessageBox() : 0;
+                    return showMessageBox != nullptr ? showMessageBox() : std::nullopt;
+                });
+
                 NullCheckedInvocation::invoke (recipient, messageResult);
             });
         }
 
-        int runSync() override
+        std::optional<int> runSync() override
         {
             if (auto showMessageBox = getShowMessageBox())
                 return showMessageBox();
 
-            return 0;
+            return {};
         }
 
         void close() override
         {
-            if (auto* toClose = windowHandle.exchange (nullptr))
+            auto* toClose = std::invoke ([&]
+            {
+                const std::scoped_lock lock { mutex };
+                closed = true;
+                return std::exchange (windowHandle, nullptr);
+            });
+
+            if (toClose != nullptr)
                 EndDialog (toClose, 0);
         }
 
         void setDialogWindowHandle (HWND dialogHandle)
         {
+            const std::scoped_lock lock { mutex };
             windowHandle = dialogHandle;
         }
 
     private:
-        std::function<int()> getShowMessageBox()
+        std::function<std::optional<int>()> getShowMessageBox()
         {
             const auto parent = associatedComponent != nullptr ? (HWND) associatedComponent->getWindowHandle() : nullptr;
             return getShowMessageBoxForParent (parent);
@@ -106,150 +106,17 @@ std::unique_ptr<ScopedMessageBoxInterface> ScopedMessageBoxInterface::create (co
 
             'this' is guaranteed to be alive when the returned function is called.
         */
-        virtual std::function<int()> getShowMessageBoxForParent (HWND parent) = 0;
-
-        Component::SafePointer<Component> associatedComponent;
-        std::atomic<HWND> windowHandle { nullptr };
-        std::future<void> future;
-
-        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (WindowsMessageBoxBase)
-    };
-
-    class PreVistaMessageBox final : public WindowsMessageBoxBase
-    {
-    public:
-        PreVistaMessageBox (const MessageBoxOptions& opts, UINT extraFlags)
-            : WindowsMessageBoxBase (opts.getAssociatedComponent()),
-              flags (extraFlags | getMessageBoxFlags (opts.getIconType())),
-              title (opts.getTitle()), message (opts.getMessage()) {}
-
-    private:
-        std::function<int()> getShowMessageBoxForParent (const HWND parent) override
+        std::function<std::optional<int>()> getShowMessageBoxForParent (const HWND parent)
         {
             JUCE_ASSERT_MESSAGE_THREAD
 
-            static std::map<DWORD, PreVistaMessageBox*> map;
-            static std::mutex mapMutex;
-
-            return [this, parent]
+            return [this, parent]() -> std::optional<int>
             {
-                const auto threadId = GetCurrentThreadId();
+                const auto title = options.getTitle();
+                const auto message = options.getMessage();
 
-                {
-                    const std::scoped_lock scope { mapMutex };
-                    map.emplace (threadId, this);
-                }
+                static constexpr auto buttonIdOffset = 0x100;
 
-                const ScopeGuard eraseFromMap { [threadId]
-                {
-                    const std::scoped_lock scope { mapMutex };
-                    map.erase (threadId);
-                } };
-
-                const auto hookCallback = [] (int nCode, const WPARAM wParam, const LPARAM lParam)
-                {
-                    auto* params = reinterpret_cast<CWPSTRUCT*> (lParam);
-
-                    if (nCode >= 0
-                        && params != nullptr
-                        && (params->message == WM_INITDIALOG || params->message == WM_DESTROY))
-                    {
-                        const auto callbackThreadId = GetCurrentThreadId();
-
-                        const std::scoped_lock scope { mapMutex };
-
-                        if (const auto iter = map.find (callbackThreadId); iter != map.cend())
-                            iter->second->setDialogWindowHandle (params->message == WM_INITDIALOG ? params->hwnd : nullptr);
-                    }
-
-                    return CallNextHookEx ({}, nCode, wParam, lParam);
-                };
-
-                const auto hook = SetWindowsHookEx (WH_CALLWNDPROC,
-                                                    hookCallback,
-                                                    (HINSTANCE) juce::Process::getCurrentModuleInstanceHandle(),
-                                                    threadId);
-                const ScopeGuard removeHook { [hook] { UnhookWindowsHookEx (hook); } };
-
-                const auto result = MessageBox (parent, message.toWideCharPointer(), title.toWideCharPointer(), flags);
-
-                if (result == IDYES || result == IDOK)     return 0;
-                if (result == IDNO && ((flags & 1) != 0))  return 1;
-
-                return 2;
-            };
-        }
-
-        static UINT getMessageBoxFlags (MessageBoxIconType iconType) noexcept
-        {
-            // this window can get lost behind JUCE windows which are set to be alwaysOnTop
-            // so if there are any set it to be topmost
-            const auto topmostFlag = WindowUtils::areThereAnyAlwaysOnTopWindows() ? MB_TOPMOST : 0;
-
-            const auto iconFlags = [&]() -> decltype (topmostFlag)
-            {
-                switch (iconType)
-                {
-                    case MessageBoxIconType::QuestionIcon:  return MB_ICONQUESTION;
-                    case MessageBoxIconType::WarningIcon:   return MB_ICONWARNING;
-                    case MessageBoxIconType::InfoIcon:      return MB_ICONINFORMATION;
-                    case MessageBoxIconType::NoIcon:        break;
-                }
-
-                return 0;
-            }();
-
-            return static_cast<UINT> (MB_TASKMODAL | MB_SETFOREGROUND | topmostFlag | iconFlags);
-        }
-
-        const UINT flags;
-        const String title, message;
-
-        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PreVistaMessageBox)
-    };
-
-    class WindowsTaskDialog final : public WindowsMessageBoxBase
-    {
-        static auto getTaskDialogFunc()
-        {
-            using TaskDialogIndirectFunc = HRESULT (WINAPI*) (const TASKDIALOGCONFIG*, INT*, INT*, BOOL*);
-
-            static const auto result = [&]() -> TaskDialogIndirectFunc
-            {
-                const auto comctl = "Comctl32.dll";
-                LoadLibraryA (comctl);
-                const auto comctlModule = GetModuleHandleA (comctl);
-
-                JUCE_BEGIN_IGNORE_WARNINGS_GCC_LIKE ("-Wcast-function-type")
-                if (comctlModule != nullptr)
-                    return (TaskDialogIndirectFunc) GetProcAddress (comctlModule, "TaskDialogIndirect");
-                JUCE_END_IGNORE_WARNINGS_GCC_LIKE
-
-                return nullptr;
-            }();
-
-            return result;
-        }
-
-    public:
-        explicit WindowsTaskDialog (const MessageBoxOptions& opts)
-            : WindowsMessageBoxBase (opts.getAssociatedComponent()),
-              iconType (opts.getIconType()),
-              title (opts.getTitle()), message (opts.getMessage()),
-              buttons { opts.getButtonText (0), opts.getButtonText (1), opts.getButtonText (2) } {}
-
-        static bool isAvailable()
-        {
-            return getTaskDialogFunc() != nullptr;
-        }
-
-    private:
-        std::function<int()> getShowMessageBoxForParent (const HWND parent) override
-        {
-            JUCE_ASSERT_MESSAGE_THREAD
-
-            return [this, parent]
-            {
                 TASKDIALOGCONFIG config{};
 
                 config.cbSize         = sizeof (config);
@@ -278,7 +145,21 @@ std::unique_ptr<ScopedMessageBoxInterface> ScopedMessageBoxInterface::create (co
                     return S_OK;
                 };
 
-                if (iconType == MessageBoxIconType::QuestionIcon)
+                const auto& buttons = options.getButtons();
+                const auto cancelIter = std::find_if (buttons.begin(),
+                                                      buttons.end(),
+                                                      [] (const auto& b) { return b.getRole() == MessageBoxButtonRole::cancel; });
+
+                if (cancelIter != buttons.end() || buttons.empty())
+                    config.dwFlags |= TDF_ALLOW_DIALOG_CANCELLATION;
+
+                config.nDefaultButton = (int) std::invoke ([&]
+                {
+                    const auto iter = std::find_if (buttons.begin(), buttons.end(), [] (const auto& b) { return b.isPreferredAction(); });
+                    return iter != buttons.end() ? buttonIdOffset + std::distance (buttons.begin(), iter) : 0;
+                });
+
+                if (options.getIconType() == MessageBoxIconType::QuestionIcon)
                 {
                     if (auto* questionIcon = LoadIcon (nullptr, IDI_QUESTION))
                     {
@@ -288,9 +169,9 @@ std::unique_ptr<ScopedMessageBoxInterface> ScopedMessageBoxInterface::create (co
                 }
                 else
                 {
-                    config.pszMainIcon = [&]() -> LPWSTR
+                    config.pszMainIcon = std::invoke ([&]() -> LPWSTR
                     {
-                        switch (iconType)
+                        switch (options.getIconType())
                         {
                             case MessageBoxIconType::WarningIcon:   return TD_WARNING_ICON;
                             case MessageBoxIconType::InfoIcon:      return TD_INFORMATION_ICON;
@@ -301,54 +182,56 @@ std::unique_ptr<ScopedMessageBoxInterface> ScopedMessageBoxInterface::create (co
                         }
 
                         return nullptr;
-                    }();
+                    });
                 }
 
+                std::vector<String> buttonStrings;
                 std::vector<TASKDIALOG_BUTTON> buttonLabels;
+                Array<int> resultCodes;
 
-                for (const auto& buttonText : buttons)
-                    if (buttonText.isNotEmpty())
-                        buttonLabels.push_back ({ (int) buttonLabels.size(), buttonText.toWideCharPointer() });
+                for (const auto& buttonIndex : AlertWindowHelpers::getSuggestedButtonOrder (options))
+                {
+                    const auto& button = options.getButtons()[(size_t) buttonIndex];
+                    if (const auto buttonText = button.getText(); buttonText.isNotEmpty())
+                    {
+                        buttonLabels.push_back ({ buttonIndex + buttonIdOffset,
+                                                  buttonStrings.emplace_back (buttonText).toWideCharPointer() });
+                        resultCodes.add (button.getCode());
+                    }
+                }
 
                 config.pButtons = buttonLabels.data();
                 config.cButtons = (UINT) buttonLabels.size();
 
-                int buttonIndex = 0;
+                int buttonId = 0;
+                TaskDialogIndirect (&config, &buttonId, nullptr, nullptr);
 
-                if (auto* func = getTaskDialogFunc())
-                    func (&config, &buttonIndex, nullptr, nullptr);
-                else
-                    jassertfalse;
+                const std::scoped_lock lock { mutex };
 
-                return buttonIndex;
+                if (closed)
+                    return 0;
+
+                if (buttonId == IDCANCEL)
+                    return cancelIter != buttons.end() ? cancelIter->getCode() : 0;
+
+                const auto buttonIndex = buttonId - buttonIdOffset;
+
+                return isPositiveAndBelow (buttonIndex, buttons.size()) ? buttons[(size_t) buttonIndex].getCode() : 0;
             };
         }
 
-        const MessageBoxIconType iconType;
-        const String title, message;
-        const std::array<String, 3> buttons;
+        Component::SafePointer<Component> associatedComponent;
+        std::future<void> future;
+        MessageBoxOptions options;
+
+        HWND windowHandle = nullptr;
+        bool closed = false;
+        std::mutex mutex;
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (WindowsTaskDialog)
     };
 
-    if (WindowsTaskDialog::isAvailable())
-        return std::make_unique<WindowsTaskDialog> (options);
-
-    const auto extraFlags = [&options]
-    {
-        const auto numButtons = options.getNumButtons();
-
-        if (numButtons == 3)
-            return MB_YESNOCANCEL;
-
-        if (numButtons == 2)
-            return options.getButtonText (0) == "OK" ? MB_OKCANCEL
-                                                     : MB_YESNO;
-
-        return MB_OK;
-    }();
-
-    return std::make_unique<PreVistaMessageBox> (options, (UINT) extraFlags);
+    return std::make_unique<WindowsTaskDialog> (options);
 }
 
 } // namespace juce::detail

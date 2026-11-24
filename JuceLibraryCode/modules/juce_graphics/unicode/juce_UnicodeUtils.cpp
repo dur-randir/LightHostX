@@ -16,7 +16,7 @@
    framework to you, and you must discontinue the installation or download
    process and cease use of the JUCE framework.
 
-   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-9-licence/
    JUCE Privacy Policy: https://juce.com/juce-privacy-policy
    JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
@@ -49,7 +49,6 @@ struct UnicodeAnalysisPoint
 {
     char32_t character = 0;
     UnicodeEntry data{};
-    uint16_t embeddingLevel = 0;
 
     UnicodeAnalysisPoint (char32_t characterIn, UnicodeEntry entry)
         : character { characterIn },
@@ -61,24 +60,14 @@ struct UnicodeAnalysisPoint
         return data.bt;
     }
 
-    GeneralCategory getGeneralCategory() const
+    auto getGeneralCategory() const
     {
-        return data.generalCategory;
+        return SBCodepointGetGeneralCategory (character);
     }
 
-    BidiType getBidiType() const
+    auto getScriptType() const
     {
-        return data.bidi;
-    }
-
-    void setBidiType (BidiType newType)
-    {
-        data.bidi = newType;
-    }
-
-    bool operator== (const BidiType& b) const
-    {
-        return getBidiType() == b;
+        return SBCodepointGetScript (character);
     }
 };
 
@@ -91,14 +80,6 @@ enum class TextBreakType
     soft, // The sequence of characters can be broken, if required.
 
     hard  // The sequence of characters must be broken here.
-};
-
-/** Types of text direction. This may also be applied to characters. */
-enum class TextDirection
-{
-    ltr, // This text reads left to right.
-
-    rtl  // This text reads right to left.
 };
 
 } // namespace juce

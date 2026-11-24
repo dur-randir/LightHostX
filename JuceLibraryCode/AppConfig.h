@@ -20,21 +20,22 @@
 
 // [END_USER_CODE_SECTION]
 
-#define JUCE_PROJUCER_VERSION 0x80001
+#define JUCE_PROJUCER_VERSION 0x90006
 
 //==============================================================================
-#define JUCE_MODULE_AVAILABLE_juce_audio_basics          1
-#define JUCE_MODULE_AVAILABLE_juce_audio_devices         1
-#define JUCE_MODULE_AVAILABLE_juce_audio_formats         1
-#define JUCE_MODULE_AVAILABLE_juce_audio_processors      1
-#define JUCE_MODULE_AVAILABLE_juce_audio_utils           0
-#define JUCE_MODULE_AVAILABLE_juce_core                  1
-#define JUCE_MODULE_AVAILABLE_juce_cryptography          0
-#define JUCE_MODULE_AVAILABLE_juce_data_structures       0
-#define JUCE_MODULE_AVAILABLE_juce_events                0
-#define JUCE_MODULE_AVAILABLE_juce_graphics              0
-#define JUCE_MODULE_AVAILABLE_juce_gui_basics            1
-#define JUCE_MODULE_AVAILABLE_juce_gui_extra             0
+#define JUCE_MODULE_AVAILABLE_juce_audio_basics                   1
+#define JUCE_MODULE_AVAILABLE_juce_audio_devices                  1
+#define JUCE_MODULE_AVAILABLE_juce_audio_formats                  1
+#define JUCE_MODULE_AVAILABLE_juce_audio_processors               1
+#define JUCE_MODULE_AVAILABLE_juce_audio_processors_headless      1
+#define JUCE_MODULE_AVAILABLE_juce_audio_utils                    0
+#define JUCE_MODULE_AVAILABLE_juce_core                           1
+#define JUCE_MODULE_AVAILABLE_juce_cryptography                   0
+#define JUCE_MODULE_AVAILABLE_juce_data_structures                0
+#define JUCE_MODULE_AVAILABLE_juce_events                         0
+#define JUCE_MODULE_AVAILABLE_juce_graphics                       0
+#define JUCE_MODULE_AVAILABLE_juce_gui_basics                     1
+#define JUCE_MODULE_AVAILABLE_juce_gui_extra                      0
 
 #define JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED 1
 
@@ -45,8 +46,16 @@
  //#define JUCE_USE_WINRT_MIDI 0
 #endif
 
+#ifndef    JUCE_USE_WINDOWS_MIDI_SERVICES
+ //#define JUCE_USE_WINDOWS_MIDI_SERVICES 0
+#endif
+
 #ifndef    JUCE_ASIO
  #define   JUCE_ASIO 1
+#endif
+
+#ifndef    JUCE_ASIO_USE_EXTERNAL_SDK
+ //#define JUCE_ASIO_USE_EXTERNAL_SDK 0
 #endif
 
 #ifndef    JUCE_WASAPI
@@ -62,11 +71,7 @@
 #endif
 
 #ifndef    JUCE_JACK
- #define   JUCE_JACK 1
-#endif
-
-#ifndef    JUCE_BELA
- //#define JUCE_BELA 0
+ #define   JUCE_JACK 0
 #endif
 
 #ifndef    JUCE_USE_ANDROID_OBOE
@@ -92,12 +97,24 @@
  #define   JUCE_USE_FLAC 0
 #endif
 
+#ifndef    JUCE_INCLUDE_FLAC_CODE
+ //#define JUCE_INCLUDE_FLAC_CODE 1
+#endif
+
 #ifndef    JUCE_USE_OGGVORBIS
  #define   JUCE_USE_OGGVORBIS 0
 #endif
 
+#ifndef    JUCE_USE_OPUS
+ #define   JUCE_USE_OPUS 0
+#endif
+
+#ifndef    JUCE_INCLUDE_OPUS_CODE
+ //#define JUCE_INCLUDE_OPUS_CODE 1
+#endif
+
 #ifndef    JUCE_USE_MP3AUDIOFORMAT
- //#define JUCE_USE_MP3AUDIOFORMAT 0
+ #define   JUCE_USE_MP3AUDIOFORMAT 0
 #endif
 
 #ifndef    JUCE_USE_LAME_AUDIO_FORMAT
@@ -109,7 +126,7 @@
 #endif
 
 //==============================================================================
-// juce_audio_processors flags:
+// juce_audio_processors_headless flags:
 
 #ifndef    JUCE_PLUGINHOST_VST
  #define   JUCE_PLUGINHOST_VST 1
@@ -215,6 +232,22 @@
  //#define JUCE_DISABLE_COREGRAPHICS_FONT_SMOOTHING 0
 #endif
 
+#ifndef    JUCE_INCLUDE_PNGLIB_CODE
+ //#define JUCE_INCLUDE_PNGLIB_CODE 1
+#endif
+
+#ifndef    JUCE_INCLUDE_JPEGLIB_CODE
+ //#define JUCE_INCLUDE_JPEGLIB_CODE 1
+#endif
+
+#ifndef    JUCE_USE_WEBP
+ //#define JUCE_USE_WEBP 1
+#endif
+
+#ifndef    JUCE_INCLUDE_WEBPLIB_CODE
+ //#define JUCE_INCLUDE_WEBPLIB_CODE 1
+#endif
+
 //==============================================================================
 // juce_gui_basics flags:
 
@@ -242,6 +275,10 @@
  #define   JUCE_USE_XCURSOR 0
 #endif
 
+#ifndef    JUCE_USE_XINPUT
+ //#define JUCE_USE_XINPUT 1
+#endif
+
 #ifndef    JUCE_WIN_PER_MONITOR_DPI_AWARE
  #define   JUCE_WIN_PER_MONITOR_DPI_AWARE 0
 #endif
@@ -264,6 +301,8 @@
 #ifndef    JUCE_ENABLE_LIVE_CONSTANT_EDITOR
  //#define JUCE_ENABLE_LIVE_CONSTANT_EDITOR 0
 #endif
+
+#define JUCE_WEBVIEW_INTEROP_LIBRARY_VERSION "1.0.0"
 
 //==============================================================================
 #ifndef    JUCE_STANDALONE_APPLICATION

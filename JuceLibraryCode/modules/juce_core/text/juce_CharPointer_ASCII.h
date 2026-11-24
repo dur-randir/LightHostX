@@ -16,7 +16,7 @@
    framework to you, and you must discontinue the installation or download
    process and cease use of the JUCE framework.
 
-   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-9-licence/
    JUCE Privacy Policy: https://juce.com/juce-privacy-policy
    JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
@@ -247,12 +247,6 @@ public:
         return CharacterFunctions::compare (*this, other);
     }
 
-    /** Compares this string with another one. */
-    int compare (const CharPointer_ASCII other) const noexcept
-    {
-        return strcmp (data, other.data);
-    }
-
     /** Compares this string with another one, up to a specified number of characters. */
     template <typename CharPointer>
     int compareUpTo (const CharPointer other, const int maxChars) const noexcept
@@ -366,7 +360,7 @@ public:
     /** Returns true if the given unicode character can be represented in this encoding. */
     static bool canRepresent (juce_wchar character) noexcept
     {
-        return ((unsigned int) character) < (unsigned int) 128;
+        return CharacterFunctions::isAscii (character);
     }
 
     /** Returns true if this data contains a valid string in this encoding. */

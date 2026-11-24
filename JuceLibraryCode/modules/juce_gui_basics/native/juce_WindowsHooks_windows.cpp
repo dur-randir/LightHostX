@@ -16,7 +16,7 @@
    framework to you, and you must discontinue the installation or download
    process and cease use of the JUCE framework.
 
-   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-9-licence/
    JUCE Privacy Policy: https://juce.com/juce-privacy-policy
    JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
@@ -44,9 +44,6 @@ public:
 
     ~Hooks()
     {
-        if (mouseWheelHook != nullptr)
-            UnhookWindowsHookEx (mouseWheelHook);
-
         if (keyboardHook != nullptr)
             UnhookWindowsHookEx (keyboardHook);
     }
@@ -54,29 +51,6 @@ public:
     static inline std::weak_ptr<Hooks> weak;
 
 private:
-    static LRESULT CALLBACK mouseWheelHookCallback (int nCode, WPARAM wParam, LPARAM lParam)
-    {
-        if (nCode >= 0 && wParam == WM_MOUSEWHEEL)
-        {
-            // using a local copy of this struct to support old mingw libraries
-            struct MOUSEHOOKSTRUCTEX_ final : public MOUSEHOOKSTRUCT  { DWORD mouseData; };
-
-            auto& hs = *(MOUSEHOOKSTRUCTEX_*) lParam;
-
-            if (auto* comp = Desktop::getInstance().findComponentAt ({ hs.pt.x, hs.pt.y }))
-            {
-                if (auto* target = static_cast<HWND> (comp->getWindowHandle()))
-                {
-                    const ScopedThreadDPIAwarenessSetter scope { target };
-                    return PostMessage (target, WM_MOUSEWHEEL,
-                                        hs.mouseData & 0xffff0000, MAKELPARAM (hs.pt.x, hs.pt.y));
-                }
-            }
-        }
-
-        return CallNextHookEx (getSingleton()->mouseWheelHook, nCode, wParam, lParam);
-    }
-
     static LRESULT CALLBACK keyboardHookCallback (int nCode, WPARAM wParam, LPARAM lParam)
     {
         auto& msg = *reinterpret_cast<MSG*> (lParam);
@@ -91,13 +65,9 @@ private:
         return CallNextHookEx (getSingleton()->keyboardHook, nCode, wParam, lParam);
     }
 
-    HHOOK mouseWheelHook = SetWindowsHookEx (WH_MOUSE,
-                                             mouseWheelHookCallback,
-                                             (HINSTANCE) juce::Process::getCurrentModuleInstanceHandle(),
-                                             GetCurrentThreadId());
     HHOOK keyboardHook = SetWindowsHookEx (WH_GETMESSAGE,
                                            keyboardHookCallback,
-                                           (HINSTANCE) juce::Process::getCurrentModuleInstanceHandle(),
+                                           nullptr,
                                            GetCurrentThreadId());
 };
 

@@ -16,7 +16,7 @@
    framework to you, and you must discontinue the installation or download
    process and cease use of the JUCE framework.
 
-   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-9-licence/
    JUCE Privacy Policy: https://juce.com/juce-privacy-policy
    JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
@@ -38,9 +38,13 @@ namespace juce
 class Direct2DImageContext : public Direct2DGraphicsContext
 {
 public:
-    explicit Direct2DImageContext (Direct2DPixelData::Ptr);
+    Direct2DImageContext (ComSmartPtr<ID2D1DeviceContext1>,
+                          ComSmartPtr<ID2D1Bitmap1>,
+                          const RectangleList<int>&);
 
     ~Direct2DImageContext() override;
+
+    ComSmartPtr<ID2D1DeviceContext1> getDeviceContext() const;
 
 private:
     struct ImagePimpl;

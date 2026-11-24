@@ -16,7 +16,7 @@
    framework to you, and you must discontinue the installation or download
    process and cease use of the JUCE framework.
 
-   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-9-licence/
    JUCE Privacy Policy: https://juce.com/juce-privacy-policy
    JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
@@ -35,17 +35,21 @@
 namespace juce
 {
 
-class PlatformTimer final : private Thread
+class GenericPlatformTimer final : private Thread
 {
 public:
-    explicit PlatformTimer (PlatformTimerListener& ptl)
+    explicit GenericPlatformTimer (PlatformTimerListener& ptl)
         : Thread { "HighResolutionTimerThread" },
           listener { ptl }
     {
-        startThread (Priority::highest);
+        if (startThread (Priority::highest))
+            return;
+
+        // This likely suggests there are too many threads running!
+        jassertfalse;
     }
 
-    ~PlatformTimer()
+    ~GenericPlatformTimer() override
     {
         stopThread (-1);
     }
@@ -154,8 +158,12 @@ private:
     mutable std::mutex runCopyMutex;
     std::shared_ptr<Timer> timer;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PlatformTimer)
-    JUCE_DECLARE_NON_MOVEABLE (PlatformTimer)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (GenericPlatformTimer)
+    JUCE_DECLARE_NON_MOVEABLE (GenericPlatformTimer)
 };
+
+#if ! JUCE_WINDOWS
+using PlatformTimer = GenericPlatformTimer;
+#endif
 
 } // namespace juce

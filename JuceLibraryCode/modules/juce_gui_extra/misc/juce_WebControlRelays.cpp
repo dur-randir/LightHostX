@@ -16,7 +16,7 @@
    framework to you, and you must discontinue the installation or download
    process and cease use of the JUCE framework.
 
-   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-9-licence/
    JUCE Privacy Policy: https://juce.com/juce-privacy-policy
    JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
@@ -37,9 +37,8 @@ namespace juce
 
 #if JUCE_WEB_BROWSER
 
-WebSliderRelay::WebSliderRelay (WebBrowserComponent& browserIn, StringRef nameIn)
-    : browser (browserIn),
-      name (nameIn)
+WebSliderRelay::WebSliderRelay (StringRef nameIn)
+    : name (nameIn)
 {
 }
 
@@ -75,12 +74,25 @@ WebBrowserComponent::Options WebSliderRelay::buildOptions (const WebBrowserCompo
 {
     return initialOptions
         .withEventListener (eventId, [this] (auto object) { handleEvent (object); })
-        .withInitialisationData ("__juce__sliders", name);
+        .withInitialisationData ("__juce__sliders", name)
+        .withWebViewLifetimeListener (this);
 }
 
 void WebSliderRelay::emitEvent (const var& payload)
 {
-    browser.emitEventIfBrowserIsVisible (eventId, payload);
+    if (browser != nullptr)
+        browser->emitEventIfBrowserIsVisible (eventId, payload);
+}
+
+void WebSliderRelay::webViewConstructed (WebBrowserComponent* browserIn)
+{
+    browser = browserIn;
+    listeners.call (&Listener::initialUpdateRequested, this);
+}
+
+void WebSliderRelay::webViewDestructed (WebBrowserComponent*)
+{
+    browser = nullptr;
 }
 
 void WebSliderRelay::handleEvent (const var& event)
@@ -117,14 +129,12 @@ void WebSliderRelay::handleEvent (const var& event)
         }
     }
 
-    const auto s = JSON::toString (event);
     jassertfalse;
 }
 
 //==============================================================================
-WebToggleButtonRelay::WebToggleButtonRelay ([[maybe_unused]] WebBrowserComponent& browserIn, StringRef nameIn)
-    : browser (browserIn),
-      name (nameIn)
+WebToggleButtonRelay::WebToggleButtonRelay (StringRef nameIn)
+    : name (nameIn)
 {
 }
 
@@ -154,12 +164,25 @@ WebBrowserComponent::Options WebToggleButtonRelay::buildOptions (const WebBrowse
 {
     return initialOptions
               .withEventListener (eventId, [this] (auto object) { handleEvent (object); })
-              .withInitialisationData ("__juce__toggles", name);
+              .withInitialisationData ("__juce__toggles", name)
+              .withWebViewLifetimeListener (this);
 }
 
 void WebToggleButtonRelay::emitEvent (const var& payload)
 {
-    browser.emitEventIfBrowserIsVisible (eventId, payload);
+    if (browser != nullptr)
+        browser->emitEventIfBrowserIsVisible (eventId, payload);
+}
+
+void WebToggleButtonRelay::webViewConstructed (WebBrowserComponent* browserIn)
+{
+    browser = browserIn;
+    listeners.call (&Listener::initialUpdateRequested);
+}
+
+void WebToggleButtonRelay::webViewDestructed (WebBrowserComponent*)
+{
+    browser = nullptr;
 }
 
 void WebToggleButtonRelay::handleEvent (const var& event)
@@ -182,14 +205,12 @@ void WebToggleButtonRelay::handleEvent (const var& event)
         }
     }
 
-    const auto s = JSON::toString (event);
     jassertfalse;
 }
 
 //==============================================================================
-WebComboBoxRelay::WebComboBoxRelay ([[maybe_unused]] WebBrowserComponent& browserIn, StringRef nameIn)
-    : browser (browserIn),
-      name (nameIn)
+WebComboBoxRelay::WebComboBoxRelay (StringRef nameIn)
+    : name (nameIn)
 {
 }
 
@@ -219,12 +240,25 @@ WebBrowserComponent::Options WebComboBoxRelay::buildOptions (const WebBrowserCom
 {
     return initialOptions
         .withEventListener (eventId, [this] (auto object) { handleEvent (object); })
-        .withInitialisationData ("__juce__comboBoxes", name);
+        .withInitialisationData ("__juce__comboBoxes", name)
+        .withWebViewLifetimeListener (this);
 }
 
 void WebComboBoxRelay::emitEvent (const var& payload)
 {
-    browser.emitEventIfBrowserIsVisible (eventId, payload);
+    if (browser != nullptr)
+        browser->emitEventIfBrowserIsVisible (eventId, payload);
+}
+
+void WebComboBoxRelay::webViewConstructed (WebBrowserComponent* browserIn)
+{
+    browser = browserIn;
+    listeners.call (&Listener::initialUpdateRequested);
+}
+
+void WebComboBoxRelay::webViewDestructed (WebBrowserComponent*)
+{
+    browser = nullptr;
 }
 
 void WebComboBoxRelay::handleEvent (const var& event)
@@ -247,7 +281,6 @@ void WebComboBoxRelay::handleEvent (const var& event)
         }
     }
 
-    const auto s = JSON::toString (event);
     jassertfalse;
 }
 

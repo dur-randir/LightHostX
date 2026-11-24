@@ -99,7 +99,7 @@ void DeviceSelectorDialog::getPreferredSize(int &outWidth, int &outHeight) const
     auto &displays = Desktop::getInstance().getDisplays();
     if (auto *primary = displays.getPrimaryDisplay())
     {
-        int screenH = primary->userArea.getHeight();
+        int screenH = primary->userBounds.toNearestInt().getHeight();
         outHeight = jmin(outHeight, screenH - 50);
     }
 }

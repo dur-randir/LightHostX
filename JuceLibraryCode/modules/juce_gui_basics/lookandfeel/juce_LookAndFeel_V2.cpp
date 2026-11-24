@@ -16,7 +16,7 @@
    framework to you, and you must discontinue the installation or download
    process and cease use of the JUCE framework.
 
-   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-9-licence/
    JUCE Privacy Policy: https://juce.com/juce-privacy-policy
    JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
@@ -38,7 +38,7 @@ namespace juce
 //==============================================================================
 LookAndFeel_V2::LookAndFeel_V2()
 {
-    // initialise the standard set of colours..
+    // initialise the standard set of colours
     const uint32 textButtonColour      = 0xffbbbbff;
     const uint32 textHighlightColour   = 0x401111ee;
     const uint32 standardOutlineColour = 0xb2808080;
@@ -265,7 +265,7 @@ Font LookAndFeel_V2::getTextButtonFont (TextButton&, int buttonHeight)
 
 int LookAndFeel_V2::getTextButtonWidthToFitText (TextButton& b, int buttonHeight)
 {
-    return getTextButtonFont (b, buttonHeight).getStringWidth (b.getButtonText()) + buttonHeight;
+    return GlyphArrangement::getStringWidthInt (getTextButtonFont (b, buttonHeight), b.getButtonText()) + buttonHeight;
 }
 
 void LookAndFeel_V2::drawButtonText (Graphics& g, TextButton& button,
@@ -361,7 +361,7 @@ void LookAndFeel_V2::changeToggleButtonWidthToFitText (ToggleButton& button)
 
     Font font (withDefaultMetrics (FontOptions { fontSize }));
 
-    button.setSize (font.getStringWidth (button.getButtonText()) + roundToInt (tickWidth) + 9,
+    button.setSize (GlyphArrangement::getStringWidthInt (font, button.getButtonText()) + roundToInt (tickWidth) + 9,
                     button.getHeight());
 }
 
@@ -393,37 +393,57 @@ void LookAndFeel_V2::drawDrawableButton (Graphics& g, DrawableButton& button,
 }
 
 //==============================================================================
-AlertWindow* LookAndFeel_V2::createAlertWindow (const String& title, const String& message,
-                                                const String& button1, const String& button2, const String& button3,
-                                                MessageBoxIconType iconType,
-                                                int numButtons, Component* associatedComponent)
+std::unique_ptr<AlertWindow> LookAndFeel_V2::createAlertWindowForOptions (const MessageBoxOptions& opt)
 {
-    AlertWindow* aw = new AlertWindow (title, message, iconType, associatedComponent);
+    auto aw = std::make_unique<AlertWindow> (opt.getTitle(),
+                                             opt.getMessage(),
+                                             opt.getIconType(),
+                                             opt.getAssociatedComponent());
 
-    if (numButtons == 1)
+    aw->setEscapeKeyCancels (opt.getNumButtons() == 0);
+
+    if (opt.getNumButtons() == 0)
+        return aw;
+
+    // If this is hit, your alert window has duplicate result codes!
+    jassert (opt.areAllResultCodesUnique());
+
+    if (opt.getNumButtons() == 1)
     {
-        aw->addButton (button1, 0,
-                       KeyPress (KeyPress::escapeKey),
+        const auto& button = opt.getButtons().front();
+        const auto cancelRole = button.getRole() == MessageBoxButtonRole::cancel;
+        aw->addButton (button.getText(),
+                       button.getCode(),
+                       cancelRole ? KeyPress (KeyPress::escapeKey) : KeyPress{},
                        KeyPress (KeyPress::returnKey));
-    }
-    else
-    {
-        const KeyPress button1ShortCut ((int) CharacterFunctions::toLowerCase (button1[0]), 0, 0);
-        KeyPress button2ShortCut ((int) CharacterFunctions::toLowerCase (button2[0]), 0, 0);
-        if (button1ShortCut == button2ShortCut)
-            button2ShortCut = KeyPress();
 
-        if (numButtons == 2)
+        return aw;
+    }
+
+    const auto& buttons = opt.getButtons();
+
+    const auto buttonOrder = detail::AlertWindowHelpers::getSuggestedButtonOrder (opt);
+
+    std::set<juce_wchar> uniqueShortcuts;
+
+    for (const auto& value : buttonOrder)
+    {
+        const auto& button = buttons[(size_t) value];
+        const auto shortcut = CharacterFunctions::toLowerCase (button.getText()[0]);
+        const auto mnemonic = uniqueShortcuts.insert (shortcut).second ? KeyPress ((int) shortcut, 0, 0) : KeyPress();
+
+        const auto actionKey = std::invoke ([&]
         {
-            aw->addButton (button1, 1, KeyPress (KeyPress::returnKey), button1ShortCut);
-            aw->addButton (button2, 0, KeyPress (KeyPress::escapeKey), button2ShortCut);
-        }
-        else if (numButtons == 3)
-        {
-            aw->addButton (button1, 1, button1ShortCut);
-            aw->addButton (button2, 2, button2ShortCut);
-            aw->addButton (button3, 0, KeyPress (KeyPress::escapeKey));
-        }
+            if (button.isPreferredAction())
+                return KeyPress (KeyPress::returnKey);
+
+            if (button.getRole() == MessageBoxButtonRole::cancel)
+                return KeyPress (KeyPress::escapeKey);
+
+            return KeyPress();
+        });
+
+        aw->addButton (button.getText(), button.getCode(), mnemonic, actionKey);
     }
 
     return aw;
@@ -557,7 +577,7 @@ void LookAndFeel_V2::drawProgressBar (Graphics& g, ProgressBar& progressBar,
     }
     else
     {
-        // spinning bar..
+        // spinning bar
         g.setColour (foreground);
 
         const int stripeWidth = height * 2;
@@ -571,7 +591,11 @@ void LookAndFeel_V2::drawProgressBar (Graphics& g, ProgressBar& progressBar,
                                 x, (float) height,
                                 x - (float) stripeWidth * 0.5f, (float) height);
 
-        Image im (Image::ARGB, width, height, true);
+        Image im (Image::ARGB,
+                  width,
+                  height,
+                  true,
+                  *g.getInternalContext().getPreferredImageTypeForTemporaryImages());
 
         {
             Graphics g2 (im);
@@ -883,7 +907,7 @@ void LookAndFeel_V2::getIdealPopupMenuItemSize (const String& text, const bool i
             font.setHeight ((float) standardMenuItemHeight / 1.3f);
 
         idealHeight = standardMenuItemHeight > 0 ? standardMenuItemHeight : roundToInt (font.getHeight() * 1.3f);
-        idealWidth = font.getStringWidth (text) + idealHeight * 2;
+        idealWidth = GlyphArrangement::getStringWidthInt (font, text) + idealHeight * 2;
     }
 }
 
@@ -899,6 +923,22 @@ void LookAndFeel_V2::getIdealPopupMenuItemSizeWithOptions (const String& text,
                                standardMenuItemHeight,
                                idealWidth,
                                idealHeight);
+}
+
+void LookAndFeel_V2::getIdealPopupMenuSectionHeaderSizeWithOptions (const String& text,
+                                                                    int standardMenuItemHeight,
+                                                                    int& idealWidth,
+                                                                    int& idealHeight,
+                                                                    const PopupMenu::Options& options)
+{
+    getIdealPopupMenuItemSizeWithOptions (text,
+                                          false,
+                                          standardMenuItemHeight,
+                                          idealWidth,
+                                          idealHeight,
+                                          options);
+    idealHeight += idealHeight / 2;
+    idealWidth += idealWidth / 4;
 }
 
 void LookAndFeel_V2::drawPopupMenuBackground (Graphics& g, int width, int height)
@@ -1117,8 +1157,7 @@ Font LookAndFeel_V2::getMenuBarFont (MenuBarComponent& menuBar, int /*itemIndex*
 
 int LookAndFeel_V2::getMenuBarItemWidth (MenuBarComponent& menuBar, int itemIndex, const String& itemText)
 {
-    return getMenuBarFont (menuBar, itemIndex, itemText)
-            .getStringWidth (itemText) + menuBar.getHeight();
+    return GlyphArrangement::getStringWidthInt (getMenuBarFont (menuBar, itemIndex, itemText), itemText) + menuBar.getHeight();
 }
 
 void LookAndFeel_V2::drawMenuBarItem (Graphics& g, int width, int height,
@@ -1743,7 +1782,7 @@ void LookAndFeel_V2::drawTooltip (Graphics& g, const String& text, int width, in
 {
     g.fillAll (findColour (TooltipWindow::backgroundColourId));
 
-   #if ! JUCE_MAC // The mac windows already have a non-optional 1 pix outline, so don't double it here..
+   #if ! JUCE_MAC // The mac windows already have a non-optional 1 pix outline, so don't double it here.
     g.setColour (findColour (TooltipWindow::outlineColourId));
     g.drawRect (0, 0, width, height, 1);
    #endif
@@ -1887,7 +1926,7 @@ void LookAndFeel_V2::drawDocumentWindowTitleBar (DocumentWindow& window, Graphic
     Font font (withDefaultMetrics (FontOptions { (float) h * 0.65f, Font::bold }));
     g.setFont (font);
 
-    int textW = font.getStringWidth (window.getName());
+    int textW = GlyphArrangement::getStringWidthInt (font, window.getName());
     int iconW = 0;
     int iconH = 0;
 
@@ -2137,7 +2176,7 @@ void LookAndFeel_V2::drawGroupComponentOutline (Graphics& g, int width, int heig
     auto textW = text.isEmpty() ? 0
                                 : jlimit (0.0f,
                                           jmax (0.0f, w - cs2 - textEdgeGap * 2),
-                                          (float) f.getStringWidth (text) + textEdgeGap * 2.0f);
+                                          (float) GlyphArrangement::getStringWidthInt (f, text) + textEdgeGap * 2.0f);
     auto textX = cs + textEdgeGap;
 
     if (position.testFlags (Justification::horizontallyCentred))
@@ -2190,8 +2229,9 @@ int LookAndFeel_V2::getTabButtonSpaceAroundImage()
 
 int LookAndFeel_V2::getTabButtonBestWidth (TabBarButton& button, int tabDepth)
 {
-    int width = Font (withDefaultMetrics (FontOptions { (float) tabDepth * 0.6f })).getStringWidth (button.getButtonText().trim())
-                   + getTabButtonOverlap (tabDepth) * 2;
+    int width = GlyphArrangement::getStringWidthInt (withDefaultMetrics (FontOptions { (float) tabDepth * 0.6f }),
+                                                     button.getButtonText().trim())
+              + getTabButtonOverlap (tabDepth) * 2;
 
     if (auto* extraComponent = button.getExtraComponent())
         width += button.getTabbedButtonBar().isVertical() ? extraComponent->getHeight()
@@ -2449,14 +2489,14 @@ Button* LookAndFeel_V2::createTabBarExtrasButton()
     dp.setFill (Colour (0x59000000));
 
     DrawableComposite normalImage;
-    normalImage.addAndMakeVisible (ellipse.createCopy().release());
-    normalImage.addAndMakeVisible (dp.createCopy().release());
+    normalImage.addChild (ellipse.createCopy());
+    normalImage.addChild (dp.createCopy());
 
     dp.setFill (Colour (0xcc000000));
 
     DrawableComposite overImage;
-    overImage.addAndMakeVisible (ellipse.createCopy().release());
-    overImage.addAndMakeVisible (dp.createCopy().release());
+    overImage.addChild (ellipse.createCopy());
+    overImage.addChild (dp.createCopy());
 
     auto db = new DrawableButton (TRANS ("Additional Items"), DrawableButton::ImageFitted);
     db->setImages (&normalImage, &overImage, nullptr);
@@ -2626,7 +2666,13 @@ void LookAndFeel_V2::drawCallOutBoxBackground (CallOutBox& box, Graphics& g,
 {
     if (cachedImage.isNull())
     {
-        cachedImage = Image (Image::ARGB, box.getWidth(), box.getHeight(), true);
+        cachedImage = Image (Image::ARGB,
+                             box.getWidth(),
+                             box.getHeight(),
+                             true,
+                             *g.getInternalContext().getPreferredImageTypeForTemporaryImages());
+        cachedImage.setBackupEnabled (false);
+
         Graphics g2 (cachedImage);
 
         DropShadow (Colours::black.withAlpha (0.7f), 8, Point<int> (0, 2)).drawForPath (g2, path);
@@ -2794,9 +2840,7 @@ void LookAndFeel_V2::layoutFileBrowserComponent (FileBrowserComponent& browserCo
 //==============================================================================
 static std::unique_ptr<Drawable> createDrawableFromSVG (const char* data)
 {
-    auto xml = parseXML (data);
-    jassert (xml != nullptr);
-    return Drawable::createFromSVG (*xml);
+    return Drawable::createFromSVGString (data);
 }
 
 const Drawable* LookAndFeel_V2::getDefaultFolderImage()

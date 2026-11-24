@@ -16,7 +16,7 @@
    framework to you, and you must discontinue the installation or download
    process and cease use of the JUCE framework.
 
-   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-9-licence/
    JUCE Privacy Policy: https://juce.com/juce-privacy-policy
    JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
@@ -63,7 +63,7 @@ public:
         clearSingletonInstance();
     }
 
-    JUCE_DECLARE_SINGLETON (InternalMessageQueue, false)
+    JUCE_DECLARE_SINGLETON_INLINE (InternalMessageQueue, false)
 
     //==============================================================================
     void broadcastMessage (const String& message)
@@ -140,7 +140,7 @@ public:
                       && ! JuceWindowIdentifier::isJUCEWindow (m.hwnd))
                 {
                     // if it's someone else's window being clicked on, and the focus is
-                    // currently on a juce window, pass the kb focus over..
+                    // currently on a juce window, pass the kb focus over
                     auto currentFocus = GetFocus();
 
                     if (currentFocus == nullptr || JuceWindowIdentifier::isJUCEWindow (currentFocus))
@@ -259,8 +259,6 @@ private:
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (InternalMessageQueue)
 };
-
-JUCE_IMPLEMENT_SINGLETON (InternalMessageQueue)
 
 const TCHAR InternalMessageQueue::messageWindowName[] = _T("JUCEWindow");
 

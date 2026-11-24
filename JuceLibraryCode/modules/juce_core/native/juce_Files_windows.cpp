@@ -16,7 +16,7 @@
    framework to you, and you must discontinue the installation or download
    process and cease use of the JUCE framework.
 
-   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-9-licence/
    JUCE Privacy Policy: https://juce.com/juce-privacy-policy
    JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
@@ -113,9 +113,6 @@ namespace WindowsFileHelpers
 
     static String getDriveFromPath (String path)
     {
-        if (path.isNotEmpty() && path[1] == ':' && path[2] == 0)
-            path << '\\';
-
         const size_t numBytes = CharPointer_UTF16::getBytesRequiredFor (path.getCharPointer()) + 4;
         HeapBlock<WCHAR> pathCopy;
         pathCopy.calloc (numBytes, 1);
@@ -124,7 +121,9 @@ namespace WindowsFileHelpers
         if (PathStripToRoot (pathCopy))
             path = static_cast<const WCHAR*> (pathCopy);
 
-        return path;
+        // The volume functions only accept a root that ends with a separator, which PathStripToRoot
+        // leaves off a UNC share
+        return File::addTrailingSeparator (path);
     }
 
     static int64 getDiskSpaceInfo (const String& path, const bool total)
@@ -253,12 +252,12 @@ namespace WindowsFileHelpers
 //==============================================================================
 #if JUCE_ALLOW_STATIC_NULL_VARIABLES
 
-JUCE_BEGIN_IGNORE_WARNINGS_MSVC (4996)
+JUCE_BEGIN_IGNORE_DEPRECATION_WARNINGS
 
 const juce_wchar File::separator = '\\';
 const StringRef File::separatorString ("\\");
 
-JUCE_END_IGNORE_WARNINGS_MSVC
+JUCE_END_IGNORE_DEPRECATION_WARNINGS
 
 #endif
 
@@ -342,7 +341,7 @@ bool File::moveToTrash() const
     if (! exists())
         return true;
 
-    // The string we pass in must be double null terminated..
+    // The string we pass in must be double null terminated.
     const size_t numBytes = CharPointer_UTF16::getBytesRequiredFor (fullPath.getCharPointer()) + 8;
     HeapBlock<WCHAR> doubleNullTermPath;
     doubleNullTermPath.calloc (numBytes, 1);
@@ -723,6 +722,7 @@ File JUCE_CALLTYPE File::getSpecialLocation (const SpecialLocationType type)
         case commonDocumentsDirectory:          csidlType = CSIDL_COMMON_DOCUMENTS;     break;
         case globalApplicationsDirectory:       csidlType = CSIDL_PROGRAM_FILES;        break;
         case globalApplicationsDirectoryX86:    csidlType = CSIDL_PROGRAM_FILESX86;     break;
+        case windowsProgramFilesCommon:         csidlType = CSIDL_PROGRAM_FILES_COMMON; break;
         case windowsLocalAppData:               csidlType = CSIDL_LOCAL_APPDATA;        break;
         case userMusicDirectory:                csidlType = 0x0d; /*CSIDL_MYMUSIC*/     break;
         case userMoviesDirectory:               csidlType = 0x0e; /*CSIDL_MYVIDEO*/     break;
@@ -911,7 +911,9 @@ static String readWindowsShortcutOrLink (const File& shortcut, bool wantsAbsolut
     if (! wantsAbsolutePath)
         return readWindowsLnkFile (shortcut, false);
 
-    auto* h = CreateFile (shortcut.getFullPathName().toWideCharPointer(),
+    static constexpr const char* prefix = R"(\\?\)";
+
+    auto* h = CreateFile ((prefix + shortcut.getFullPathName()).toWideCharPointer(),
                           GENERIC_READ, FILE_SHARE_READ, nullptr,
                           OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
 
@@ -938,8 +940,6 @@ static String readWindowsShortcutOrLink (const File& shortcut, bool wantsAbsolut
 
         return buffer.data();
     }();
-
-    static constexpr const char* prefix ("\\\\?\\");
 
     // It turns out that GetFinalPathNameByHandleW prepends \\?\ to the path.
     // This is not a bug, it's a feature. See MSDN for more information.

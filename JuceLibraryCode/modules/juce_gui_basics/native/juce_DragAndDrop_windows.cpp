@@ -16,7 +16,7 @@
    framework to you, and you must discontinue the installation or download
    process and cease use of the JUCE framework.
 
-   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-9-licence/
    JUCE Privacy Policy: https://juce.com/juce-privacy-policy
    JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
@@ -311,14 +311,12 @@ namespace DragAndDropHelpers
             clearSingletonInstance();
         }
 
-        JUCE_DECLARE_SINGLETON_SINGLETHREADED (ThreadPoolHolder, false)
+        JUCE_DECLARE_SINGLETON_SINGLETHREADED_INLINE (ThreadPoolHolder, false)
 
         // We need to make sure we don't do simultaneous text and file drag and drops,
         // so use a pool that can only run a single job.
         ThreadPool pool { ThreadPoolOptions{}.withNumberOfThreads (1) };
     };
-
-    JUCE_IMPLEMENT_SINGLETON (ThreadPoolHolder)
 }
 
 //==============================================================================

@@ -16,7 +16,7 @@
    framework to you, and you must discontinue the installation or download
    process and cease use of the JUCE framework.
 
-   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-9-licence/
    JUCE Privacy Policy: https://juce.com/juce-privacy-policy
    JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
@@ -710,8 +710,18 @@ Array<AudioChannelSet> AudioChannelSet::channelSetsWithNumberOfChannels (int num
                     return { AudioChannelSet::create7point0point4() };
                 case 12:
                     return { AudioChannelSet::create7point1point4() };
+                case 13:
+                    return { AudioChannelSet::create7point0point6(),
+                             AudioChannelSet::create9point0point4(),
+                             AudioChannelSet::create9point0point4ITU() };
                 case 14:
-                    return { AudioChannelSet::create7point1point6() };
+                    return { AudioChannelSet::create7point1point6(),
+                             AudioChannelSet::create9point1point4(),
+                             AudioChannelSet::create9point1point4ITU() };
+                case 15:
+                    return {
+                            AudioChannelSet::create9point0point6(),
+                            AudioChannelSet::create9point0point6ITU() };
                 case 16:
                     return { AudioChannelSet::create9point1point6(),
                              AudioChannelSet::create9point1point6ITU() };
