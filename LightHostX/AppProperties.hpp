@@ -23,21 +23,21 @@ public:
             PropertiesFile::Options options;
             options.applicationName     = "LightHostX";
             options.filenameSuffix      = "settings";
-            options.osxLibrarySubFolder = "Application Support/LightHostX";
+            options.osxLibrarySubFolder = "Application Support/com.randir.LightHostX";
 
             appProperties = std::make_unique<ApplicationProperties>();
             appProperties->setStorageParameters(options);
         }
-        
+
         return appProperties->getUserSettings();
     };
-    
+
     static void saveIfNeeded() {
         if (initialized) {
             appProperties->saveIfNeeded();
         }
     }
-    
+
     static void destroy() {
         if (initialized) {
             appProperties->saveIfNeeded();
